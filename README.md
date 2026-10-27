@@ -8,8 +8,8 @@ The architecture document and Test Plan are available. Application development, 
 
 ## Project documents
 
-- [Software Architecture and Design — SAD, version 1.0](docs/SAD_Conference_Room_Booking_System.docx): layered architecture, components, booking flows, security considerations and illustrative API contracts. Prepared by Bhogala Srika.
-- [Software Test Plan — STP, version 1.2](docs/Test_Plan_Conference_Room_Booking_System.docx): test strategy, 20 initial test scenarios, traceability, sprint testing activities and CI/CD verification. Maintained by Dabbugunta Venya Anand.
+- [Software Architecture and Design — SAD, version 1.0](SAD_Conference_Room_Booking_System.docx): layered architecture, components, booking flows, security considerations and illustrative API contracts. Prepared by Bhogala Srika.
+- [Software Test Plan — STP, version 1.2](Test_Plan_Conference_Room_Booking_System.docx): test strategy, 20 initial test scenarios, traceability, sprint testing activities and CI/CD verification. Maintained by Dabbugunta Venya Anand.
 - **Software Requirements Specification — SRS:** to be added by its owner before the required document submission.
 
 The Test Plan makes concrete release assumptions where SAD 1.0 leaves choices open. **Use Section 11 and Appendix A of the Test Plan when preparing the SRS**, and align the next SAD revision with those choices. Appendix A defines 15 functional requirements, 5 non-functional requirements, 2 security objectives and 5 security requirements.
