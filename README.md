@@ -97,6 +97,39 @@ Track stories, estimates, owners and defects in Jira. Follow the course-defined 
 
 The Test Plan records the working responsibility allocation. All team members share implementation, review and testing responsibilities.
 
-## Repository setup
+## Repository layout
 
-Place this README at the repository root and keep the linked Word documents in `docs/`. Add the SRS there when ready. Application startup commands, environment variables and exact software versions will be documented when the implementation is added; executable setup instructions are not yet available.
+```
+client/   React + TypeScript + Tailwind (Vite): src/{pages,components,api}
+server/   Express + TypeScript (Prisma + PostgreSQL later): src/{routes,services,middleware,lib}, prisma/schema.prisma, tests/
+docs/     DEVIATIONS.md (SRS/SAD/Test Plan are the source of truth; log any deviation there)
+```
+
+## How to run
+
+Requirements: Node.js 20+ and npm.
+
+```bash
+cp .env.example .env        # never commit .env
+
+# Server (http://localhost:3000, try GET /api/health)
+cd server && npm install && npm run dev
+
+# Client (http://localhost:5173, proxies /api to the server)
+cd client && npm install && npm run dev
+```
+
+Scripts available in both `client/` and `server/`: `npm run dev`, `npm run build`, `npm run lint`, `npm test`.
+
+## Contributing: branches, commits and PRs
+
+- Never commit to `main` directly.
+- One branch per Jira story, named `CRBS-<n>-<short-name>`, e.g. `CRBS-11-scaffold`.
+- Every commit message starts with the Jira key, e.g. `CRBS-11: add server skeleton`.
+- One pull request per story; the PR title starts with the Jira key. Build, lint and tests must pass before review.
+- No secrets in git: use `.env.example` for variable names. Use synthetic data only.
+
+## API conventions
+
+- Errors are always `{ "error": { "code": "...", "message": "..." } }` using 400/401/403/404/409, plus a safe 500.
+- Timestamps are stored in UTC; the organisation timezone is Asia/Kolkata; time intervals are half-open `[start, end)`.
