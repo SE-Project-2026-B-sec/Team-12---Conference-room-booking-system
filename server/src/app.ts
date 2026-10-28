@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { healthRouter } from "./routes/health.js";
 
@@ -10,6 +12,13 @@ export function createApp() {
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: { code: "NOT_FOUND", message: "Resource not found" } });
   });
+
+  // Serve the built client when present (Docker image); SPA fallback for non-API paths.
+  const publicDir = path.resolve("public");
+  if (existsSync(publicDir)) {
+    app.use(express.static(publicDir));
+    app.get("/{*splat}", (_req, res) => res.sendFile(path.join(publicDir, "index.html")));
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
