@@ -121,6 +121,17 @@ cd client && npm install && npm run dev
 
 Scripts available in both `client/` and `server/`: `npm run dev`, `npm run build`, `npm run lint`, `npm test`.
 
+### Docker Compose
+
+```bash
+cp .env.example .env
+docker compose up --build      # app on http://localhost:3000, PostgreSQL as service `db`
+curl http://localhost:3000/api/health
+docker compose down            # add -v to also delete the database volume
+```
+
+The single `app` image serves the API and the built client; both services have healthchecks and `app` waits for a healthy `db`.
+
 ## Contributing: branches, commits and PRs
 
 - Never commit to `main` directly.
