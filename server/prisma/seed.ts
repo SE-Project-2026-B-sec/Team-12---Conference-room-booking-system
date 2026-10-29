@@ -1,28 +1,52 @@
-
 import { PrismaClient, UserRole } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
+// CRBS-14 / CRBS-15: Cost factor 12 per SRS SR02 and Test Plan TC16.
+const BCRYPT_COST = 12;
+
+// Explicitly documented demo credentials for verification:
+// - Regular User: demo.user@example.com / User123!@#
+// - Administrator: demo.admin@example.com / Admin123!@#
+export const SEED_CREDENTIALS = {
+  user: {
+    email: "demo.user@example.com",
+    password: "User123!@#",
+  },
+  admin: {
+    email: "demo.admin@example.com",
+    password: "Admin123!@#",
+  },
+} as const;
+
 async function main() {
-  // Create two reusable demo users.
+  const userPasswordHash = await bcrypt.hash(SEED_CREDENTIALS.user.password, BCRYPT_COST);
+  const adminPasswordHash = await bcrypt.hash(SEED_CREDENTIALS.admin.password, BCRYPT_COST);
+
+  // Create or update two reusable demo users with valid bcrypt cost-12 hashes.
   const user = await prisma.user.upsert({
-    where: { email: "demo.user@example.com" },
-    update: {},
+    where: { email: SEED_CREDENTIALS.user.email },
+    update: {
+      passwordHash: userPasswordHash,
+    },
     create: {
       name: "Demo User",
-      email: "demo.user@example.com",
-      passwordHash: "SEED_ONLY_REPLACE_WITH_BCRYPT_HASH",
+      email: SEED_CREDENTIALS.user.email,
+      passwordHash: userPasswordHash,
       role: UserRole.USER,
     },
   });
 
   await prisma.user.upsert({
-    where: { email: "demo.admin@example.com" },
-    update: {},
+    where: { email: SEED_CREDENTIALS.admin.email },
+    update: {
+      passwordHash: adminPasswordHash,
+    },
     create: {
       name: "Demo Admin",
-      email: "demo.admin@example.com",
-      passwordHash: "SEED_ONLY_REPLACE_WITH_BCRYPT_HASH",
+      email: SEED_CREDENTIALS.admin.email,
+      passwordHash: adminPasswordHash,
       role: UserRole.ADMIN,
     },
   });
@@ -92,7 +116,7 @@ async function main() {
     });
   }
 
-  console.log("Seed completed: demo users, rooms, and booking.");
+  console.log("Seed completed: demo users with bcrypt hashes, rooms, and booking.");
 }
 
 main()
