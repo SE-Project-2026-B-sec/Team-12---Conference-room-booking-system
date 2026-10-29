@@ -11,3 +11,9 @@ Run the existing client scripts: `npm test`, `npm run build`, `npm run lint`, an
 Test mapping: TC01 room details; TC02 search and empty results; TC04 successful creation; TC05/TC06 inline validation and server errors; TC07 stale availability conflicts; TC16 session/CSRF request handling. Vitest UI tests mock the API boundary and are distinct from PostgreSQL integration and real-browser acceptance.
 
 My bookings, cancellation screens, administrator screens, a Firefox acceptance run and expanded accessibility testing belong to later assigned stories and are not implemented here. No CI or deployment workflow changes are included.
+
+## Verification on 29 October 2026
+
+All 32 client tests, the client production build and ESLint passed. Real Chromium-based in-app browser acceptance used this frontend with the compiled CRBS-16 backend and local PostgreSQL 16: seeded-account login, room fields, availability, empty-purpose inline error, confirmed booking ID/time display, restored session in a second tab, a stale-booking 409 followed by refreshed availability, and logout passed. Synthetic booking fixtures were used; these were real API/database calls, not a mocked browser demo. Merge CRBS-16 before this frontend's end-to-end acceptance on main.
+
+The backend on CRBS-16 passed all 109 server tests, build and lint. Windows reserved local port 5432, so the local ignored .env uses 55432 for development and test database URLs. The existing migration/seed commands were invoked directly through Node on Windows due to command-launch/PATH issues; no shared setup scripts or Docker configuration were changed. The browser viewport override did not apply, so no mobile-viewport acceptance result is claimed.
