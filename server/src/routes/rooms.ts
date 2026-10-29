@@ -2,8 +2,21 @@
 import { Router } from "express";
 import { BookingStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
+import { requireSession } from "../middleware/require-session.js";
 
 export const roomsRouter = Router();
+
+roomsRouter.get("/rooms", requireSession, async (_req, res, next) => {
+  try {
+    const rooms = await prisma.room.findMany({
+      select: { id: true, name: true, location: true, capacity: true, facilities: true },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+    });
+    res.status(200).json(rooms);
+  } catch (error) {
+    next(error);
+  }
+});
 
 const TIME_ZONE_OFFSET = "+05:30"; // Asia/Kolkata
 
