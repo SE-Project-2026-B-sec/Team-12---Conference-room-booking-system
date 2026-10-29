@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  server:
+    name: Server
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: crbs
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: crbs_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U crbs -d crbs_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: server
+
+    env:
+      DATABASE_URL_TEST: postgresql://crbs:ci_password@localhost:5432/crbs_test
+      SESSION_SECRET: ci_test_session_secret_for_pull_request_checks
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run TypeScript build
+        run: npm run build
+
+      - name: Prepare test database
+        run: npm run test:db:prepare
+
+      - name: Run test suite
+        run: npm test
+
+  client:
+    name: Client
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run client build
+        run: npm run build
+
+      - name: Run test suite
+        run: npm test
