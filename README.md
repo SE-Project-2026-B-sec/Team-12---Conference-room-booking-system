@@ -132,6 +132,21 @@ docker compose down            # add -v to also delete the database volume
 
 The single `app` image serves the API and the built client; both services have healthchecks and `app` waits for a healthy `db`.
 
+### Integration tests (database)
+
+`server/tests/bookings.test.ts` runs against a real PostgreSQL database named `*_test`; the tests refuse to run if the name in `DATABASE_URL_TEST` does not end with `_test`, so they cannot touch the dev database. The compose `db` service publishes port 5432 on `127.0.0.1` for this.
+
+One-time setup (database running via `docker compose up -d db`):
+
+```bash
+# add DATABASE_URL_TEST (see .env.example) to your .env, then:
+docker compose exec db psql -U "$POSTGRES_USER" -c "CREATE DATABASE crbs_test;"
+cd server && npm run test:db:prepare   # applies Prisma migrations to crbs_test
+npm test
+```
+
+Without `DATABASE_URL_TEST` (or the schema), `bookings.test.ts` fails with a clear message rather than skipping. Each test creates and deletes its own synthetic rows.
+
 ## Contributing: branches, commits and PRs
 
 - Never commit to `main` directly.
