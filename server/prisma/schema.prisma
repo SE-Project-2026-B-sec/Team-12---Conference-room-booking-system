@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @db.VarChar(255)
+  role         UserRole @default(USER)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  bookings  Booking[]
+  auditLogs AuditLog[]
+}
+
+model Room {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(100)
+  location   String   @db.VarChar(200)
+  capacity   Int
+  facilities String[] @default([])
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  bookings Booking[]
+
+  @@index([capacity])
+}
+
+model Booking {
+  id        Int           @id @default(autoincrement())
+  userId    Int
+  roomId    Int
+  startAt   DateTime      @db.Timestamptz(3)
+  endAt     DateTime      @db.Timestamptz(3)
+  purpose   String        @db.VarChar(200)
+  status    BookingStatus @default(CONFIRMED)
+  createdAt DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime      @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@index([userId, startAt])
+  @@index([roomId, status, startAt, endAt])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  actorId    Int?
+  action     String   @db.VarChar(100)
+  entityType String   @db.VarChar(100)
+  entityId   String?  @db.VarChar(100)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+}
