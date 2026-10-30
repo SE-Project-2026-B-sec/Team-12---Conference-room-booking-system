@@ -154,6 +154,8 @@ Without `DATABASE_URL_TEST` (or the schema), `bookings.test.ts` fails with a cle
 - Every commit message starts with the Jira key, e.g. `CRBS-11: add server skeleton`.
 - One pull request per story; the PR title starts with the Jira key. Build, lint and tests must pass before review.
 - No secrets in git: use `.env.example` for variable names. Use synthetic data only.
+- PRs must use the pull request template, have green `Server` and `Client` checks, and get an owner review (requested automatically via CODEOWNERS) before merging.
+- Direct commits to `main` are not allowed by team rule. GitHub branch protection needs repo admin rights and is tracked as a separate card.
 
 ## API conventions
 
