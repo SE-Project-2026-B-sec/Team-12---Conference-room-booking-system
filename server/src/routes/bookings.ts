@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { cancelBooking } from "../services/booking-service.js";
 import { prisma } from "../lib/prisma.js";
 import { requireSession } from "../middleware/require-session.js";
 import { validateBookingRequest } from "../services/booking-validation.js";
@@ -39,6 +40,46 @@ bookingsRouter.post("/", requireSession, async (req, res, next) => {
       roomId: booking.roomId,
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+bookingsRouter.patch("/:id/cancel", requireSession, async (req, res, next) => {
+  try {
+    const bookingId = Number(req.params.id);
+
+    if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
+      res.status(404).json({
+        error: { code: "NOT_FOUND", message: "Booking not found." },
+      });
+      return;
+    }
+
+    // Identity comes from the authenticated session, never the request body.
+    const userId = req.session.userId as number;
+
+    const result = await cancelBooking(bookingId, userId);
+
+    if (!result.ok) {
+      if (result.reason === "NOT_FOUND") {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Booking not found." },
+        });
+      } else {
+        res.status(409).json({
+          error: {
+            code: "CONFLICT",
+            message: "A booking cannot be cancelled at or after its start time.",
+          },
+        });
+      }
+      return;
+    }
+
+    res.status(200).json({
+      bookingId: result.booking.id,
+      status: result.booking.status,
     });
   } catch (error) {
     next(error);

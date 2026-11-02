@@ -60,3 +60,62 @@ export async function createBooking(
     timeout: 15_000,
   });
 }
+export type CancelBookingResult =
+  | { ok: true; booking: { id: number; status: BookingStatus } }
+  | { ok: false; reason: "NOT_FOUND" | "TOO_LATE" };
+
+/**
+ * Cancels a booking only when it belongs to the requesting user
+ * and its start time has not been reached.
+ *
+ * Repeated cancellation is successful (idempotent).
+ */
+export async function cancelBooking(
+  bookingId: number,
+  userId: number,
+): Promise<CancelBookingResult> {
+  const now = new Date();
+
+  // Atomic conditional update prevents cancelling a booking that has started.
+  const updated = await prisma.booking.updateMany({
+    where: {
+      id: bookingId,
+      userId,
+      status: BookingStatus.CONFIRMED,
+      startAt: { gt: now },
+    },
+    data: { status: BookingStatus.CANCELLED },
+  });
+
+  if (updated.count === 1) {
+    return {
+      ok: true,
+      booking: { id: bookingId, status: BookingStatus.CANCELLED },
+    };
+  }
+
+  // Re-read to distinguish an already-cancelled booking from a missing,
+  // unowned, or already-started booking.
+  const existing = await prisma.booking.findFirst({
+    where: { id: bookingId, userId },
+    select: { id: true, status: true, startAt: true },
+  });
+
+  if (!existing) {
+    return { ok: false, reason: "NOT_FOUND" };
+  }
+
+  if (existing.status === BookingStatus.CANCELLED) {
+    return {
+      ok: true,
+      booking: { id: existing.id, status: BookingStatus.CANCELLED },
+    };
+  }
+
+  if (existing.startAt <= new Date()) {
+    return { ok: false, reason: "TOO_LATE" };
+  }
+
+  // A concurrent state change occurred; don't report a false success.
+  return { ok: false, reason: "TOO_LATE" };
+}

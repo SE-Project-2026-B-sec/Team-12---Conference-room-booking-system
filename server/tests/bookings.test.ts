@@ -181,8 +181,6 @@ describe("TC05 / invalid booking input", () => {
   });
 });
 
-
-
 describe("CRBS-25 / My Bookings", () => {
   it("returns only bookings belonging to the logged-in user", async () => {
     const { agent, user, room } = await setup();
@@ -202,7 +200,6 @@ describe("CRBS-25 / My Bookings", () => {
     const login = await otherAgent
       .post("/api/auth/login")
       .send({ email: otherUser.email, password: PASSWORD });
-
     expect(login.status).toBe(200);
 
     const startAt = new Date(Date.now() + 2 * 86_400_000);
@@ -229,7 +226,6 @@ describe("CRBS-25 / My Bookings", () => {
     });
 
     const response = await agent.get("/api/bookings");
-
     expect(response.status).toBe(200);
     expect(response.body.bookings).toHaveLength(1);
     expect(response.body.bookings[0]).toMatchObject({
@@ -242,7 +238,6 @@ describe("CRBS-25 / My Bookings", () => {
 
   it("allows the owner to view their booking details", async () => {
     const { agent, user, room } = await setup();
-
     const startAt = new Date(Date.now() + 2 * 86_400_000);
     const booking = await prisma.booking.create({
       data: {
@@ -255,7 +250,6 @@ describe("CRBS-25 / My Bookings", () => {
     });
 
     const response = await agent.get(`/api/bookings/${booking.id}`);
-
     expect(response.status).toBe(200);
     expect(response.body.booking).toMatchObject({
       id: booking.id,
@@ -266,7 +260,6 @@ describe("CRBS-25 / My Bookings", () => {
 
   it("returns 404 when another user tries to view a booking", async () => {
     const { agent, user, room } = await setup();
-
     const otherUser = await prisma.user.create({
       data: {
         name: "Other User",
@@ -288,18 +281,14 @@ describe("CRBS-25 / My Bookings", () => {
     });
 
     expect(user.id).not.toBe(otherUser.id);
-
     const response = await agent.get(`/api/bookings/${booking.id}`);
-
     expect(response.status).toBe(404);
     expect(response.body.error.code).toBe("NOT_FOUND");
   });
 
   it("returns 404 for an unknown booking ID", async () => {
     const { agent } = await setup();
-
     const response = await agent.get("/api/bookings/999999999");
-
     expect(response.status).toBe(404);
     expect(response.body.error.code).toBe("NOT_FOUND");
   });
@@ -308,8 +297,137 @@ describe("CRBS-25 / My Bookings", () => {
     const response = await request(
       createApp({ sessionStore: new session.MemoryStore() }),
     ).get("/api/bookings");
-
     expect(response.status).toBe(401);
     expect(response.body.error.code).toBe("UNAUTHENTICATED");
+  });
+});
+
+describe("CRBS-26 / booking cancellation (FR10 + FR11)", () => {
+  async function createFutureBooking(userId: number, roomId: number) {
+    const date = istDate(3);
+    const startAt = new Date(`${date}T10:00:00+05:30`);
+    const endAt = new Date(`${date}T11:00:00+05:30`);
+
+    return prisma.booking.create({
+      data: {
+        userId,
+        roomId,
+        startAt,
+        endAt,
+        purpose: "Cancellation test",
+        status: "CONFIRMED",
+      },
+    });
+  }
+
+  it("allows the owner to cancel a future booking", async () => {
+    const { agent, user, room, csrf } = await setup();
+    const booking = await createFutureBooking(user.id, room.id);
+    const res = await agent
+      .patch(`/api/bookings/${booking.id}/cancel`)
+      .set("x-csrf-token", csrf);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ bookingId: booking.id, status: "CANCELLED" });
+    const saved = await prisma.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+    });
+    expect(saved.status).toBe("CANCELLED");
+  });
+
+  it("does not allow another user to cancel the booking", async () => {
+    const owner = await setup();
+    const otherUser = await setup();
+    const booking = await createFutureBooking(owner.user.id, owner.room.id);
+    const res = await otherUser.agent
+      .patch(`/api/bookings/${booking.id}/cancel`)
+      .set("x-csrf-token", otherUser.csrf);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+    const saved = await prisma.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+    });
+    expect(saved.status).toBe("CONFIRMED");
+  });
+
+  it("returns success when the owner cancels the same booking again", async () => {
+    const { agent, user, room, csrf } = await setup();
+    const booking = await createFutureBooking(user.id, room.id);
+    const first = await agent
+      .patch(`/api/bookings/${booking.id}/cancel`)
+      .set("x-csrf-token", csrf);
+    const second = await agent
+      .patch(`/api/bookings/${booking.id}/cancel`)
+      .set("x-csrf-token", csrf);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(second.body.status).toBe("CANCELLED");
+  });
+
+  it("rejects cancellation at or after the booking start time", async () => {
+    const { agent, user, room, csrf } = await setup();
+    const startAt = new Date(Date.now() - 60_000);
+    const booking = await prisma.booking.create({
+      data: {
+        userId: user.id,
+        roomId: room.id,
+        startAt,
+        endAt: new Date(startAt.getTime() + 60 * 60_000),
+        purpose: "Already started booking",
+        status: "CONFIRMED",
+      },
+    });
+
+    const res = await agent
+      .patch(`/api/bookings/${booking.id}/cancel`)
+      .set("x-csrf-token", csrf);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CONFLICT");
+    const saved = await prisma.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+    });
+    expect(saved.status).toBe("CONFIRMED");
+  });
+
+  it("makes the room available again after cancellation", async () => {
+    const { agent, user, room, csrf } = await setup();
+    const booking = await createFutureBooking(user.id, room.id);
+    const date = istDate(3);
+    const before = await request(createApp()).get(
+      `/api/rooms/availability?date=${date}&startTime=10:00&endTime=11:00`,
+    );
+    expect(before.status).toBe(200);
+    expect(before.body.rooms.some((item: { id: number }) => item.id === room.id)).toBe(false);
+
+    const cancelled = await agent
+      .patch(`/api/bookings/${booking.id}/cancel`)
+      .set("x-csrf-token", csrf);
+    expect(cancelled.status).toBe(200);
+
+    const after = await request(createApp()).get(
+      `/api/rooms/availability?date=${date}&startTime=10:00&endTime=11:00`,
+    );
+    expect(after.status).toBe(200);
+    expect(after.body.rooms.some((item: { id: number }) => item.id === room.id)).toBe(true);
+  });
+
+  it("requires an authenticated session", async () => {
+    const { user, room } = await setup();
+    const booking = await createFutureBooking(user.id, room.id);
+    const res = await request(createApp())
+      .patch(`/api/bookings/${booking.id}/cancel`);
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("returns 404 for an unknown booking ID", async () => {
+    const { agent, csrf } = await setup();
+    const res = await agent
+      .patch("/api/bookings/2000000000/cancel")
+      .set("x-csrf-token", csrf);
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
   });
 });
