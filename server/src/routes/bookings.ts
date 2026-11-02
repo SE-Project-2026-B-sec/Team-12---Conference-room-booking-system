@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { prisma } from "../lib/prisma.js";
 import { requireSession } from "../middleware/require-session.js";
 import { validateBookingRequest } from "../services/booking-validation.js";
 import { createBooking } from "../services/booking-service.js";
@@ -39,6 +40,90 @@ bookingsRouter.post("/", requireSession, async (req, res, next) => {
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+// CRBS-25: List bookings belonging to the authenticated user.
+bookingsRouter.get("/", requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.userId as number;
+
+    const bookings = await prisma.booking.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        roomId: true,
+        startAt: true,
+        endAt: true,
+        purpose: true,
+        status: true,
+        createdAt: true,
+        room: {
+          select: {
+            name: true,
+            location: true,
+            capacity: true,
+          },
+        },
+      },
+      orderBy: [{ startAt: "desc" }, { id: "desc" }],
+    });
+
+    res.status(200).json({ bookings });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// CRBS-25: Get one booking only if it belongs to the authenticated user.
+bookingsRouter.get("/:id", requireSession, async (req, res, next) => {
+  try {
+    const userId = req.session.userId as number;
+    const bookingId = Number(req.params.id);
+
+    if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
+      res.status(404).json({
+        error: { code: "NOT_FOUND", message: "Booking not found." },
+      });
+      return;
+    }
+
+    const booking = await prisma.booking.findFirst({
+      where: {
+        id: bookingId,
+        userId,
+      },
+      select: {
+        id: true,
+        roomId: true,
+        startAt: true,
+        endAt: true,
+        purpose: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        room: {
+          select: {
+            name: true,
+            location: true,
+            capacity: true,
+            facilities: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      res.status(404).json({
+        error: { code: "NOT_FOUND", message: "Booking not found." },
+      });
+      return;
+    }
+
+    res.status(200).json({ booking });
   } catch (error) {
     next(error);
   }
