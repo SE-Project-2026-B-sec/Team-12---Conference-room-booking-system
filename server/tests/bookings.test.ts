@@ -180,3 +180,136 @@ describe("TC05 / invalid booking input", () => {
     expect(await bookingCount(room.id)).toBe(0);
   });
 });
+
+
+
+describe("CRBS-25 / My Bookings", () => {
+  it("returns only bookings belonging to the logged-in user", async () => {
+    const { agent, user, room } = await setup();
+
+    const otherUser = await prisma.user.create({
+      data: {
+        name: "Other User",
+        email: `${randomUUID()}@example.test`,
+        passwordHash,
+      },
+    });
+    createdUserIds.push(otherUser.id);
+
+    const otherAgent = request.agent(
+      createApp({ sessionStore: new session.MemoryStore() }),
+    );
+    const login = await otherAgent
+      .post("/api/auth/login")
+      .send({ email: otherUser.email, password: PASSWORD });
+
+    expect(login.status).toBe(200);
+
+    const startAt = new Date(Date.now() + 2 * 86_400_000);
+    const endAt = new Date(startAt.getTime() + 60 * 60_000);
+
+    const ownBooking = await prisma.booking.create({
+      data: {
+        userId: user.id,
+        roomId: room.id,
+        startAt,
+        endAt,
+        purpose: "My meeting",
+      },
+    });
+
+    await prisma.booking.create({
+      data: {
+        userId: otherUser.id,
+        roomId: room.id,
+        startAt: new Date(startAt.getTime() + 2 * 60 * 60_000),
+        endAt: new Date(endAt.getTime() + 2 * 60 * 60_000),
+        purpose: "Other user's meeting",
+      },
+    });
+
+    const response = await agent.get("/api/bookings");
+
+    expect(response.status).toBe(200);
+    expect(response.body.bookings).toHaveLength(1);
+    expect(response.body.bookings[0]).toMatchObject({
+      id: ownBooking.id,
+      roomId: room.id,
+      purpose: "My meeting",
+      status: "CONFIRMED",
+    });
+  });
+
+  it("allows the owner to view their booking details", async () => {
+    const { agent, user, room } = await setup();
+
+    const startAt = new Date(Date.now() + 2 * 86_400_000);
+    const booking = await prisma.booking.create({
+      data: {
+        userId: user.id,
+        roomId: room.id,
+        startAt,
+        endAt: new Date(startAt.getTime() + 60 * 60_000),
+        purpose: "Project meeting",
+      },
+    });
+
+    const response = await agent.get(`/api/bookings/${booking.id}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.booking).toMatchObject({
+      id: booking.id,
+      roomId: room.id,
+      purpose: "Project meeting",
+    });
+  });
+
+  it("returns 404 when another user tries to view a booking", async () => {
+    const { agent, user, room } = await setup();
+
+    const otherUser = await prisma.user.create({
+      data: {
+        name: "Other User",
+        email: `${randomUUID()}@example.test`,
+        passwordHash,
+      },
+    });
+    createdUserIds.push(otherUser.id);
+
+    const startAt = new Date(Date.now() + 2 * 86_400_000);
+    const booking = await prisma.booking.create({
+      data: {
+        userId: otherUser.id,
+        roomId: room.id,
+        startAt,
+        endAt: new Date(startAt.getTime() + 60 * 60_000),
+        purpose: "Private meeting",
+      },
+    });
+
+    expect(user.id).not.toBe(otherUser.id);
+
+    const response = await agent.get(`/api/bookings/${booking.id}`);
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("returns 404 for an unknown booking ID", async () => {
+    const { agent } = await setup();
+
+    const response = await agent.get("/api/bookings/999999999");
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("returns 401 when the user is not authenticated", async () => {
+    const response = await request(
+      createApp({ sessionStore: new session.MemoryStore() }),
+    ).get("/api/bookings");
+
+    expect(response.status).toBe(401);
+    expect(response.body.error.code).toBe("UNAUTHENTICATED");
+  });
+});

@@ -55,5 +55,8 @@ export async function createBooking(
     });
     await hooks.afterInsert?.(tx);
     return { ok: true, booking };
+  }, {
+    maxWait: 10_000,
+    timeout: 15_000,
   });
 }
