@@ -1,5 +1,6 @@
 import { roomsRouter } from "./routes/rooms.js";
 import { bookingsRouter } from "./routes/bookings.js";
+import { adminRoomsRouter } from "./routes/admin-rooms.js";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import express, { type NextFunction, type Request, type Response } from "express";
@@ -44,6 +45,7 @@ export function createApp(options?: AppOptions) {
   app.use("/api", authRouter);
   app.use("/api", roomsRouter);
   app.use("/api/bookings", bookingsRouter);
+  app.use("/api/admin/rooms", adminRoomsRouter);
 
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: { code: "NOT_FOUND", message: "Resource not found" } });
