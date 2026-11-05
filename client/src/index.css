@@ -883,3 +883,8 @@ nav[aria-label="Workspace"] { display:flex; flex-wrap:wrap; gap:12px; padding:14
 .confirmation-dialog p { margin:16px 0 22px; line-height:1.6; }
 .confirmation-dialog::backdrop { background:#10291dcc; }
 @media(max-width:600px) { nav[aria-label="Workspace"] { padding:10px 16px; gap:4px; } .secondary-screen .results-header { align-items:stretch; flex-direction:column; gap:16px; } .booking-summary { padding:16px; } }
+
+/* CRBS-30: editable room details, shared with the small-screen card layout. */
+.admin-room-form { display:grid; gap:18px; padding:24px; margin:24px 0; border:1px solid #dbe2dc; border-radius:12px; background:white; }
+.admin-room-form .field { min-width:0; }
+@media(min-width:900px) { .admin-room-form { grid-template-columns:1fr 1fr; } .admin-room-form > h2,.admin-room-form > p,.admin-room-form > .booking-actions { grid-column:1 / -1; } }
