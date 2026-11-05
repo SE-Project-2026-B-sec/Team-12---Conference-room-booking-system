@@ -2,6 +2,11 @@ export interface User { id: number; name: string; email: string; role: "USER" | 
 export interface Room { id: number; name: string; location: string; capacity: number; facilities: string[] }
 export interface Search { date: string; startTime: string; endTime: string; capacity: string }
 export interface Booking { bookingId: number; status: "CONFIRMED"; roomId: number; startAt: string; endAt: string }
+export interface OwnedBooking {
+  id: number; roomId: number; startAt: string; endAt: string; purpose: string;
+  status: "CONFIRMED" | "CANCELLED"; createdAt: string;
+  room: { name: string; location: string; capacity: number };
+}
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public fields: Record<string, string> = {}) { super(message); }
@@ -24,6 +29,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return body as T;
 }
 export const api = {
+  myBookings: (signal?: AbortSignal) => request<{ bookings: OwnedBooking[] }>("/bookings", { signal }),
+  cancelBooking: (id: number) => request<{ bookingId: number; status: "CANCELLED" }>(`/bookings/${id}/cancel`, { method: "PATCH" }),
   me: (signal?: AbortSignal) => request<User>("/auth/me", { signal }),
   login: (email: string, password: string) => request<User>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   logout: async () => { await request("/auth/logout", { method: "POST" }); csrfToken = ""; },
