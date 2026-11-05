@@ -12,6 +12,7 @@ export default function MyBookings({ onSignedOut }: { onSignedOut: (message?: st
   const [target, setTarget] = useState<OwnedBooking | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const feedback = useRef<HTMLParagraphElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
 
@@ -37,6 +38,9 @@ export default function MyBookings({ onSignedOut }: { onSignedOut: (message?: st
     if (target && element && !element.open) element.showModal();
     if (!target && element?.open) { element.close(); opener.current?.focus(); }
   }, [target]);
+
+  useEffect(() => { if (notice || error) feedback.current?.focus(); }, [notice, error]);
+  useEffect(() => { if (busy && dialog.current?.open) dialog.current.focus(); }, [busy]);
 
   function refresh() { setLoading(true); setError(""); setRevision((n) => n + 1); }
   async function cancel() {
@@ -72,8 +76,8 @@ export default function MyBookings({ onSignedOut }: { onSignedOut: (message?: st
   return <section aria-labelledby="my-bookings-heading" className="secondary-screen">
     <div className="results-header"><div><span className="eyebrow">YOUR RESERVATIONS</span><h1 id="my-bookings-heading">My bookings</h1><p className="muted">All times in IST. Cancel confirmed bookings before their start time.</p></div>
       <button className="button secondary" onClick={refresh} disabled={loading || busy}>Refresh bookings</button></div>
-    {notice && <p role="status" className="alert success">{notice}</p>}
-    {error && <p role="alert" className="alert error">{error}</p>}
+    {notice && <p role="status" ref={feedback} tabIndex={-1} className="alert success">{notice}</p>}
+    {error && <p role="alert" ref={feedback} tabIndex={-1} className="alert error">{error}</p>}
     {loading ? <p role="status">Loading your bookings…</p> : bookings.length === 0 && !error
       ? <p className="empty-state">You have no bookings yet. Use Find a room to make a reservation.</p>
       : <div className="booking-list">{bookings.map((booking) => {
@@ -90,7 +94,14 @@ export default function MyBookings({ onSignedOut }: { onSignedOut: (message?: st
           }}>Cancel booking #{booking.id}</button>}
         </article>;
       })}</div>}
-    <dialog ref={dialog} className="confirmation-dialog" aria-labelledby="cancel-title" aria-describedby="cancel-description"
+    <dialog ref={dialog} tabIndex={-1} className="confirmation-dialog" aria-labelledby="cancel-title" aria-describedby="cancel-description"
+      onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+        if (!buttons.length) { event.preventDefault(); event.currentTarget.focus(); }
+        else if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1)?.focus(); }
+        else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus(); }
+      }}
       onCancel={(event) => { if (busy) event.preventDefault(); else setTarget(null); }}>
       <h2 id="cancel-title">Cancel this booking?</h2>
       <p id="cancel-description">{target?.room.name} · Booking #{target?.id}. This releases the room for other users.</p>

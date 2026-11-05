@@ -1,0 +1,111 @@
+{
+  "date": "2026-11-05",
+  "coreFocus": [
+    {
+      "label": "Skip to main",
+      "height": 668,
+      "id": "main-content",
+      "role": null,
+      "tag": "MAIN",
+      "text": "MAKE ROOM FOR GOOD WORKFind your meeting spaceA quick catch-up or a big discussi",
+      "width": 678
+    },
+    {
+      "label": "First form control",
+      "height": 668,
+      "id": "date",
+      "role": null,
+      "tag": "INPUT",
+      "text": "",
+      "width": 678
+    },
+    {
+      "label": "Search results",
+      "height": 668,
+      "id": "rooms-heading",
+      "role": null,
+      "tag": "H2",
+      "text": "Available rooms4",
+      "width": 678
+    },
+    {
+      "label": "Room selected",
+      "height": 668,
+      "id": "purpose",
+      "role": null,
+      "tag": "TEXTAREA",
+      "text": "",
+      "width": 678
+    },
+    {
+      "label": "After purpose",
+      "height": 668,
+      "id": "",
+      "role": null,
+      "tag": "BUTTON",
+      "text": "Cancel selection",
+      "width": 678
+    },
+    {
+      "label": "Confirm action",
+      "height": 668,
+      "id": "",
+      "role": null,
+      "tag": "BUTTON",
+      "text": "Confirm booking",
+      "width": 678
+    },
+    {
+      "label": "Booking feedback",
+      "height": 668,
+      "id": "",
+      "role": "status",
+      "tag": "DIV",
+      "text": "Booking confirmed · #13CRBS-30 Demo Room · 6 Nov 2026, 10:00 am – 11:00 am IST",
+      "width": 678
+    }
+  ],
+  "finalDialogFocus": [
+    {
+      "key": "Tab",
+      "tag": "BUTTON",
+      "text": "Yes, cancel booking"
+    },
+    {
+      "key": "Tab",
+      "tag": "BUTTON",
+      "text": "Keep booking"
+    },
+    {
+      "key": "Shift+Tab",
+      "tag": "BUTTON",
+      "text": "Yes, cancel booking"
+    }
+  ],
+  "desktopAttempt": {
+    "requested": {
+      "width": 1366,
+      "height": 768
+    },
+    "actual": {
+      "height": 668,
+      "scrollWidth": 663,
+      "width": 678
+    }
+  },
+  "mobileAttempt": {
+    "requested": {
+      "width": 360,
+      "height": 800
+    },
+    "actual": {
+      "width": 678,
+      "height": 668
+    },
+    "freshTabActual": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "status": "Keyboard behavior verified; exact required viewport sizes NOT VERIFIED. Firefox NOT RUN."
+}

@@ -33,14 +33,22 @@ describe("TC10 / TC11 / TC12 My Bookings and cancellation UI", () => {
     await confirm(); expect(api.cancelBooking).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Keep booking" }));
     expect(api.cancelBooking).not.toHaveBeenCalled(); expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel booking #12" }));
   });
   it("Escape dismisses without cancelling", async () => {
     await confirm(); fireEvent(screen.getByRole("dialog"), new Event("cancel", { bubbles: true, cancelable: true }));
     expect(api.cancelBooking).not.toHaveBeenCalled(); expect(screen.queryByRole("dialog")).toBeNull();
   });
+  it("TC18 wraps Tab and Shift+Tab inside the confirmation", async () => {
+    await confirm(); const keep = screen.getByRole("button", { name: "Keep booking" });
+    const yes = screen.getByRole("button", { name: "Yes, cancel booking" });
+    keep.focus(); fireEvent.keyDown(keep, { key: "Tab", shiftKey: true }); expect(document.activeElement).toBe(yes);
+    fireEvent.keyDown(yes, { key: "Tab" }); expect(document.activeElement).toBe(keep);
+  });
   it("updates status only after the cancellation succeeds", async () => {
     await confirm(); fireEvent.click(screen.getByRole("button", { name: "Yes, cancel booking" }));
     await screen.findByText(/Booking #12 cancelled/); expect(api.cancelBooking).toHaveBeenCalledWith(12);
+    expect(document.activeElement).toBe(screen.getByRole("status"));
     expect(screen.getByText("Cancelled")).toBeTruthy(); expect(screen.queryByRole("button", { name: "Cancel booking #12" })).toBeNull();
   });
   it("does not offer cancellation for started or cancelled bookings", async () => {

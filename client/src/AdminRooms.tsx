@@ -32,6 +32,8 @@ function AdminRoomEditor({ onSignedOut, onRoomsChanged }: { onSignedOut: (messag
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
   const nameInput = useRef<HTMLInputElement>(null);
+  const feedback = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { if (notice || error) feedback.current?.focus(); }, [notice, error]);
   function failure(error: unknown) {
     if (error instanceof ApiError && error.status === 401) { onSignedOut("Your session expired. Please sign in again."); return; }
     if (error instanceof ApiError && error.status === 400) setFields(error.fields);
@@ -51,7 +53,7 @@ function AdminRoomEditor({ onSignedOut, onRoomsChanged }: { onSignedOut: (messag
       }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [revision, onSignedOut]);
-  function reset() { setEditing(null); setDraft(empty); setFields({}); setError(""); }
+  function reset() { setEditing(null); setDraft(empty); setFields({}); setError(""); nameInput.current?.focus(); }
   async function save(event: FormEvent) {
     event.preventDefault(); if (busy) return;
     const { fields, value } = validateRoom(draft); setFields(fields); setError(""); setNotice("");
@@ -72,8 +74,8 @@ function AdminRoomEditor({ onSignedOut, onRoomsChanged }: { onSignedOut: (messag
     <div className="results-header"><div><span className="eyebrow">ADMINISTRATION</span><h1 id="admin-rooms-heading">Manage rooms</h1>
       <p className="muted">Create rooms and edit their details. Existing bookings remain unchanged.</p></div>
       <button className="button secondary" disabled={busy || loading} onClick={() => { setLoading(true); setError(""); setRevision((n) => n + 1); }}>Reload room list</button></div>
-    {notice && <p role="status" className="alert success">{notice}</p>}
-    {error && <p role="alert" className="alert error">{error}</p>}
+    {notice && <p role="status" ref={feedback} tabIndex={-1} className="alert success">{notice}</p>}
+    {error && <p role="alert" ref={feedback} tabIndex={-1} className="alert error">{error}</p>}
     <form className="admin-room-form" onSubmit={save} noValidate aria-labelledby="room-form-heading">
       <h2 id="room-form-heading">{editing === null ? "Create a room" : `Edit room #${editing}`}</h2>
       <p className="muted small">Name, location and capacity are required.</p>
