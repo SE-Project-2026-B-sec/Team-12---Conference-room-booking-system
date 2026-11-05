@@ -1,5 +1,6 @@
 export interface User { id: number; name: string; email: string; role: "USER" | "ADMIN" }
 export interface Room { id: number; name: string; location: string; capacity: number; facilities: string[] }
+export type RoomInput = Omit<Room, "id">;
 export interface Search { date: string; startTime: string; endTime: string; capacity: string }
 export interface Booking { bookingId: number; status: "CONFIRMED"; roomId: number; startAt: string; endAt: string }
 export interface OwnedBooking {
@@ -29,6 +30,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return body as T;
 }
 export const api = {
+  createRoom: (room: RoomInput) => request<Room>("/admin/rooms", { method: "POST", body: JSON.stringify(room) }),
+  updateRoom: (id: number, room: RoomInput) => request<Room>(`/admin/rooms/${id}`, { method: "PATCH", body: JSON.stringify(room) }),
   myBookings: (signal?: AbortSignal) => request<{ bookings: OwnedBooking[] }>("/bookings", { signal }),
   cancelBooking: (id: number) => request<{ bookingId: number; status: "CANCELLED" }>(`/bookings/${id}/cancel`, { method: "PATCH" }),
   me: (signal?: AbortSignal) => request<User>("/auth/me", { signal }),
