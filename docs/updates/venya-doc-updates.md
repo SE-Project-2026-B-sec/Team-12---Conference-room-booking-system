@@ -60,7 +60,7 @@ The historical pending notes above are supplemented by the guided manual results
 
 ## NFR03 / NFR04 acceptance evidence
 
-Date: 6 November 2026. Manual operator: Venya; guided in chat. Application under test: local `CRBS-36-focus-ring-fix`, commit `f63fc0e`, frontend on port 5173, Express on port 3000, PostgreSQL in Docker. This identifies the tested code, rather than assuming the latest main was tested. Firefox version: **159.0.1 (64-bit)**, confirmed by About screenshot. Chrome version: **not recorded; Chrome not run**. Harish separately reported Chromium 158 and Firefox 159 checks on pre-fix main; those are separate evidence.
+Date: 6 November 2026. Manual operator: Venya; guided in chat. Application under test: local `CRBS-36-focus-ring-fix`, commit `f63fc0e`, frontend on port 5173, Express on port 3000, PostgreSQL in Docker. This identifies the tested code, rather than assuming the latest main was tested. Firefox version: **159.0.1 (64-bit)**, confirmed by About screenshot. Chrome version: **157.0.8103.39 (Official Build, 64-bit)**, transcribed by Venya from About Chrome. Harish separately reported Chromium 158 and Firefox 159 checks on pre-fix main; those are separate evidence. Agent control of installed browsers was unavailable; results below are the manual operator's explicit observations, with supplied Firefox screenshots.
 
 ### Firefox functional smoke test - operator-reported pass
 
@@ -76,8 +76,29 @@ Date: 6 November 2026. Manual operator: Venya; guided in chat. Application under
 
 - Firefox 360x800: login fit, validation and keyboard outlines; search page controls fit without horizontal scrolling; My Bookings details/actions fit, cancellation dialog fit with Escape/opener restore; admin form/list/Create/Edit fit, required-field errors and Name focus. **Pass for these stated checks.** Complete end-to-end booking/admin writes were exercised earlier in the session, not separately repeated at each exact size.
 - Firefox 1366x768: admin form/list/actions, Find a room and My Bookings fit without horizontal scrolling; login fit and email/password/Sign in keyboard outlines. **Pass for these stated checks.** Dialog/overlap and every control on every page were not separately repeated at this exact size.
-- Chrome 1366x768: **not run**.
-- Chrome 360x800: **not run**.
+- Chrome 1366x768: Find a room and My Bookings fit without sideways scrolling and controls remained reachable; admin form/list/Create/Edit controls fit; login fit and Email/Password/Sign in had visible keyboard outlines. **Pass for these stated checks.** Functional writes and dialog behavior were not separately repeated at this exact size.
+- Chrome 360x800: login layout, empty-email validation and visible focus passed; room search, booking, cancellation, overlap handling and admin create/edit passed as detailed below. Fresh reload with DevTools still open and focus in the app reached Skip to main content on first Tab. Skip activation followed by Tab traversed Date/From/Until/capacity/Find rooms with visible outlines. Invalid time interval displayed the expected inline error and focused Until. **Pass for these stated checks.**
+
+### Chrome functional smoke test - operator-reported pass
+
+- Regular-user login worked. Search for 9 November 2026, 10:00-11:00 returned rooms. Conference Room A was booked with purpose Chrome smoke test; the expected date/time/purpose and Confirmed status persisted after reload. The booking ID was not supplied.
+- Opening cancellation immediately showed Keep booking's dark outline. Tab moved to Yes cancel, then wrapped to Keep booking. Escape closed and restored the opener. Confirmed cancellation persisted after reload with no cancellation action.
+- Two preselected tabs for Conference Room A on 9 November, 11:00-12:00 produced one successful booking and a clear "That room was just booked" error in the second tab. HTTP 409 was not independently captured in Network tools.
+- Admin empty create form showed required-field errors and focused Name. Chrome Test Room was created at Test Floor, capacity 8, facilities Projector; capacity was changed to 10 and persisted after reload. Manage rooms was absent from normal-user navigation; a forced-access authorization test was not repeated.
+
+### Page-by-viewport results
+
+PASS below applies to the explicit checks stated in each cell, rather than implying every possible interaction was repeated at every size. All cells are Venya's guided manual observations.
+
+| Page | Chrome 1366x768 | Chrome 360x800 | Firefox 1366x768 | Firefox 360x800 |
+| --- | --- | --- | --- | --- |
+| Login | PASS: fit, keyboard outlines | PASS: fit, outlines, empty validation | PASS: fit, keyboard outlines | PASS: fit, outlines, empty validation |
+| Rooms / search | PASS: fit, controls reachable | PASS: fit, search, skip link, field focus, invalid interval | PASS: fit | PASS: fit; search and field focus checked in session |
+| Booking / overlap | NOT RUN at exact size | PASS: create/persist and stale-slot error | NOT RUN at exact size | NOT RUN separately at exact size; Firefox functional flows passed earlier in session |
+| My Bookings / cancel | PASS: fit; dialog not repeated | PASS: persistence, dialog focus/trap/Escape, cancel | PASS: fit; dialog not repeated | PASS: fit, dialog fit/Escape/opener; cancellation persistence checked in session |
+| Admin rooms | PASS: fit, actions reachable | PASS: fit, create/edit/persist, inline validation | PASS: fit, actions reachable | PASS: fit, inline validation/Name focus; writes checked in session |
+
+Normal-user exclusion was checked by navigation visibility in both browsers. Every admin input's Tab outline, and the full dialog/overlap flow at 1366x768, were not separately recorded. These remain NOT RUN rather than blanket passes. No failures were reported in the checks explicitly completed. The Chrome conflict, cancellation and persistence results are operator reports, not agent-observed captures.
 
 Screenshots are in `docs/evidence/CRBS-40/`: Firefox About, login with 360x800 toolbar (earlier pre-fix visual evidence), post-fix dialog focus, cancelled booking #18, overlap message and From focus. Cropped screenshots do not establish exact viewport sizes; the size-specific results above are Venya's explicit observations. Venya explicitly confirmed that opening the cancellation dialog using Enter immediately shows the dark outline on Keep booking, before any further Tab press; this Firefox-specific initial-focus check passed by manual observation. Quantitative contrast measurement and complete post-fix cross-browser signoff remain pending. Do not mark unexecuted matrix entries Passed or infer them from unit tests.
 
