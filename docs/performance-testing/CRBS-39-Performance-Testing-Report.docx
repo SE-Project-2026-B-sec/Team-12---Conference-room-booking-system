@@ -1,0 +1,77 @@
+# CRBS-39: Performance Testing Report
+
+## 1. Objective
+
+To evaluate the performance, reliability, and response time of the Conference Room Booking System under concurrent booking requests using k6.
+
+## 2. Testing Environment
+
+| Component | Specification |
+|---|---|
+| Operating System | Windows 11 |
+| Laptop | Dell Vostro 3581 |
+| Processor | Intel Core i3-7020U @ 2.30 GHz |
+| CPU Cores | 2 |
+| Logical Processors | 4 |
+| RAM | 11.9 GB |
+| Load Testing Tool | k6 v2.3.0 |
+| Backend | Node.js / Express |
+| Database | PostgreSQL |
+
+## 3. Test Configuration
+
+| Parameter | Configuration |
+|---|---|
+| Virtual Users | 5 maximum |
+| Test Users | 5 dedicated test accounts |
+| Conference Rooms | 5 dedicated test rooms |
+| Target Bookings | 100 |
+| Test Duration | 1 minute 59 seconds |
+| Load Model | Constant Arrival Rate |
+| Target Rate | 50 iterations per minute |
+| Booking Endpoint | POST /api/bookings |
+
+Each iteration logged in using a dedicated test account and attempted to create a booking for its assigned room.
+
+## 4. Performance Test Results
+
+| Metric | Observed Result |
+|---|---:|
+| Total Iterations | 100 |
+| Successful Bookings | 100 |
+| Failed Bookings | 0 |
+| Booking Average Response Time | 67.07 ms |
+| Booking Median Response Time | 65.26 ms |
+| Booking p90 Response Time | 80.86 ms |
+| Booking p95 Response Time | 94.35 ms |
+| Maximum Booking Response Time | 130.44 ms |
+| Booking Failure Rate | 0% |
+| HTTP Request Failure Rate | 0% |
+| Dropped Iterations | 0 |
+
+## 5. Acceptance Criteria Evaluation
+
+| Acceptance Criterion | Expected | Actual | Result |
+|---|---|---|---|
+| Concurrent users | 5 | 5 maximum VUs | Pass |
+| Test rooms | 5 | 5 | Pass |
+| Successful bookings | 100 | 100 | Pass |
+| Duration | 2 minutes | 1m 59s | Pass |
+| p95 response time | ≤ 3 seconds | 94.35 ms | Pass |
+| Error rate | < 5% | 0% | Pass |
+
+## 6. Observations
+
+1. All 100 booking iterations completed successfully.
+2. All booking requests returned HTTP 201.
+3. No booking failures or HTTP request failures were observed.
+4. The booking p95 response time was 94.35 ms, significantly below the 3-second threshold.
+5. No iterations were dropped during the test.
+6. The system handled the configured five virtual users without observed booking errors.
+
+## 7. Conclusion
+
+The Conference Room Booking System successfully passed the configured CRBS-39 performance test. All 100 booking iterations completed successfully with a 0% booking failure rate and a p95 booking response time of 94.35 ms.
+
+The observed results satisfy all specified performance acceptance criteria under the tested configuration.
+
