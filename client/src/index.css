@@ -85,10 +85,6 @@ input:focus,select:focus,textarea:focus {
 outline:2px solid #36845e;
 outline-offset:2px
 }
-button:focus-visible,a:focus-visible {
-outline:3px solid #8abc99;
-outline-offset:3px
-}
 [aria-invalid=true] {
 border-color:#bc5046
 }
@@ -892,7 +888,12 @@ nav[aria-label="Workspace"] { display:flex; flex-wrap:wrap; gap:12px; padding:14
 /* CRBS-36: keyboard entry, readable focus and narrow viewport containment. */
 .skip-link { position:fixed; top:12px; left:12px; z-index:100; transform:translateY(-200%); padding:12px 18px; background:#123e32; color:white; border-radius:6px; }
 .skip-link:focus { transform:translateY(0); }
-:focus-visible { outline:3px solid #123e32; outline-offset:3px; box-shadow:0 0 0 2px white; }
+:focus-visible,button:focus-visible,a:focus-visible,
+.skip-link:focus,.confirmation-dialog button:focus {
+  outline:3px solid #123e32;
+  outline-offset:3px;
+  box-shadow:0 0 0 2px white;
+}
 .workspace-body,.main-content,.field { min-width:0; }
 .main-content,.booking-summary,.alert { overflow-wrap:anywhere; }
 input,select,textarea { min-width:0; }

@@ -31,6 +31,7 @@ describe("TC10 / TC11 / TC12 My Bookings and cancellation UI", () => {
   });
   it("requires confirmation and Keep booking sends no write", async () => {
     await confirm(); expect(api.cancelBooking).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep booking" }));
     fireEvent.click(screen.getByRole("button", { name: "Keep booking" }));
     expect(api.cancelBooking).not.toHaveBeenCalled(); expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel booking #12" }));

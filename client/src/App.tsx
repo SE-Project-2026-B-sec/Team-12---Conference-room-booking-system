@@ -65,6 +65,7 @@ function Rooms({ user, onSignedOut }: { user: User; onSignedOut: (message?: stri
   const resultsHeading = useRef<HTMLHeadingElement>(null);
   const bookingFeedback = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<"rooms" | "bookings" | "admin">("rooms");
+  const previousPage = useRef(page);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [available, setAvailable] = useState<Room[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,7 +84,10 @@ function Rooms({ user, onSignedOut }: { user: User; onSignedOut: (message?: stri
   const [logoutError, setLogoutError] = useState("");
   const busy = searchBusy || bookingBusy || logoutBusy;
   const rooms = available ?? allRooms;
-  useEffect(() => { mainContent.current?.focus(); }, [page]);
+  useEffect(() => {
+    if (previousPage.current !== page) mainContent.current?.focus();
+    previousPage.current = page;
+  }, [page]);
   useEffect(() => { if (selected) purposeInput.current?.focus(); }, [selected]);
   useEffect(() => { if (applied) resultsHeading.current?.focus(); }, [applied]);
   useEffect(() => { if (success || bookingError) bookingFeedback.current?.focus(); }, [success, bookingError]);
