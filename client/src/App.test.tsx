@@ -97,6 +97,20 @@ describe("TC01 / TC02 room listing and search", () => {
 });
 
 describe("TC04 / TC05 / TC06 / TC07 booking flow", () => {
+  it("TC18 moves focus into booking and back to its room when selection is cancelled", async () => {
+    await selectRoom();
+    expect(document.activeElement).toBe(screen.getByLabelText("Meeting purpose"));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel selection" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /Choose room/ }));
+  });
+  it("TC18 exposes skip links and focuses main content on workspace navigation", async () => {
+    vi.spyOn(api, "myBookings").mockResolvedValue({ bookings: [] });
+    await readyRooms();
+    expect(screen.getByRole("link", { name: "Skip to main content" }).getAttribute("href")).toBe("#main-content");
+    fireEvent.click(screen.getByRole("button", { name: "My bookings" }));
+    await screen.findByText(/You have no bookings yet/);
+    expect(document.activeElement).toBe(screen.getByRole("main"));
+  });
   it("shows inline interval errors without sending an invalid search", async () => {
     await readyRooms();
     fireEvent.change(screen.getByLabelText("Until"), { target: { value: "09:30" } });
