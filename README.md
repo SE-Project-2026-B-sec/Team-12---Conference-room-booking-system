@@ -147,6 +147,30 @@ npm test
 
 Without `DATABASE_URL_TEST` (or the schema), `bookings.test.ts` fails with a clear message rather than skipping. Each test creates and deletes its own synthetic rows.
 
+## CD / Deployment
+
+`.github/workflows/cd.yml` ("CD") runs on every push to `main` and can be started by hand (workflow_dispatch):
+
+1. **ci** reuses `ci.yml` (jobs `Server` and `Client`). If any test fails, nothing below runs.
+2. **build-image** builds the `Dockerfile` and pushes `ghcr.io/<owner>/<repo>:<commit-sha>` and `:latest` using the built-in `GITHUB_TOKEN` (the image reference is printed in the job summary).
+3. **deploy** pulls the commit-tagged image, starts it with `docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d` and runs `scripts/smoke-test.sh`. It is **skipped by default**.
+
+**Enable the self-hosted deploy job:** register a self-hosted runner (needs repo admin; Docker must be running on that machine), put your real environment file at `~/crbs.env` on the runner machine (copy of `.env.example`; or set the repo variable `DEPLOY_ENV_FILE` to another path; it is never stored in git), then set the repository variable `DEPLOY_ENABLED` to `true` (Settings > Secrets and variables > Actions > Variables).
+
+**Deploy by hand (no runner needed):**
+
+```bash
+cp .env.example .env                 # once
+./scripts/deploy-local.sh            # builds crbs-app:<HEAD sha> locally, starts it, runs the smoke test
+./scripts/deploy-local.sh <sha>      # a specific commit
+./scripts/deploy-local.sh <sha> --pull   # use the ghcr.io image instead of building
+docker compose down                  # stop everything afterwards
+```
+
+`scripts/smoke-test.sh [base-url]` can be run against any running instance (default `http://localhost:3000`): it waits up to 30 s, then checks `GET /api/health` returns 200 and `GET /api/rooms` without a session returns 401 with the standard error JSON.
+
+**ghcr.io package visibility:** new packages are private. To change it, open the repository's Packages, select the package, then Package settings > Danger Zone > Change visibility (needs admin rights on the package). A private image needs `docker login ghcr.io` with a token that has `read:packages` before `--pull` works on another machine. The database schema is not migrated by the deploy; run `prisma migrate deploy` against the deployed database separately (to confirm for the demo setup).
+
 ## Contributing: branches, commits and PRs
 
 - Never commit to `main` directly.
