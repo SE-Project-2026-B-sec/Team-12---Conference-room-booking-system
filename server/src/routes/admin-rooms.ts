@@ -67,20 +67,37 @@ function badRequest(res: Response, fields: Record<string, string>) {
   res.status(400).json({ error: { code: "BAD_REQUEST", message: "Invalid room details." }, fields });
 }
 
+
 adminRoomsRouter.post("/", requireAdmin, async (req, res, next) => {
   try {
     const { errors, value } = validateRoomFields(req.body, false);
     if (Object.keys(errors).length > 0) return badRequest(res, errors);
 
-    const room = await prisma.room.create({
-      data: {
-        name: value.name as string,
-        location: value.location as string,
-        capacity: value.capacity as number,
-        facilities: value.facilities as string[],
-      },
-      select: ROOM_SELECT,
+    const actorId = req.session.userId as number;
+
+    const room = await prisma.$transaction(async (tx) => {
+      const createdRoom = await tx.room.create({
+        data: {
+          name: value.name as string,
+          location: value.location as string,
+          capacity: value.capacity as number,
+          facilities: value.facilities as string[],
+        },
+        select: ROOM_SELECT,
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: "ROOM_CREATED",
+          entityType: "Room",
+          entityId: String(createdRoom.id),
+        },
+      });
+
+      return createdRoom;
     });
+
     res.status(201).json(room);
   } catch (error) {
     next(error);
@@ -101,13 +118,41 @@ adminRoomsRouter.patch("/:id", requireAdmin, async (req, res, next) => {
       return badRequest(res, { body: "Provide at least one of name, location, capacity or facilities." });
     }
 
-    if (!(await prisma.room.findUnique({ where: { id }, select: { id: true } }))) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Room not found." } });
+    const actorId = req.session.userId as number;
+
+    const room = await prisma.$transaction(async (tx) => {
+      const existing = await tx.room.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+      if (!existing) return null;
+
+      const updatedRoom = await tx.room.update({
+        where: { id },
+        data: value,
+        select: ROOM_SELECT,
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: "ROOM_UPDATED",
+          entityType: "Room",
+          entityId: String(updatedRoom.id),
+        },
+      });
+
+      return updatedRoom;
+    });
+
+    if (!room) {
+      res.status(404).json({
+        error: { code: "NOT_FOUND", message: "Room not found." },
+      });
       return;
     }
 
-    // Only the rooms row is updated; bookings are never touched.
-    const room = await prisma.room.update({ where: { id }, data: value, select: ROOM_SELECT });
     res.status(200).json(room);
   } catch (error) {
     next(error);
