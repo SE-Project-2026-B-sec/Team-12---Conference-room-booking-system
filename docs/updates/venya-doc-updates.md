@@ -56,4 +56,29 @@ UI unit checks currently total **71 passed**, across App, MyBookings, AdminRooms
 
 ## Browser acceptance handoff
 
+The historical pending notes above are supplemented by the guided manual results below; they are not a claim that the entire browser matrix was rerun.
+
+## NFR03 / NFR04 acceptance evidence
+
+Date: 6 November 2026. Manual operator: Venya; guided in chat. Application under test: local `CRBS-36-focus-ring-fix`, commit `f63fc0e`, frontend on port 5173, Express on port 3000, PostgreSQL in Docker. This identifies the tested code, rather than assuming the latest main was tested. Firefox version: **159.0.1 (64-bit)**, confirmed by About screenshot. Chrome version: **not recorded; Chrome not run**. Harish separately reported Chromium 158 and Firefox 159 checks on pre-fix main; those are separate evidence.
+
+### Firefox functional smoke test - operator-reported pass
+
+- Seeded regular-user and admin login worked. Empty login submission was blocked with the required-email message. At 360x800 and 1366x768, Venya confirmed the login layout fits; at both sizes keyboard outlines were reported visible on email, password and Sign in.
+- Availability search for 8 November 2026, 10:00-11:00 returned four rooms in the test data then present. Conference Room A booking #21 was created with purpose Firefox smoke test and remained Confirmed with the correct details after reload.
+- Two tabs selected Conference Room A for 8 November, 11:00-12:00 before either submitted. The first succeeded; the second displayed "That room was just booked for this time. Choose another room or search a different time." Screenshot confirms the UI conflict message; the HTTP status was not captured in Network tools.
+- Booking #18 cancellation: initial dialog screenshot shows Keep booking's dark ring. Venya reported Tab moved to Yes cancel then wrapped to Keep booking; Escape closed the dialog and restored the opener. Actual cancellation changed #18 to Cancelled; it remained cancelled after reload with no cancellation action.
+- Admin created Firefox Test Room at Test Floor, capacity 8, facilities Projector; changed capacity to 10 and confirmed persistence after reload. Normal-user navigation did not show Manage rooms. Direct forced access/HTTP 403 was not independently rerun here.
+- Fresh authenticated reload followed by first Tab reached Skip to main content. Enter activated it; subsequent keyboard traversal reached Date, From, Until, Minimum capacity and Find rooms with visible outlines, as reported by Venya. An initially uncertain date outline was explicitly rechecked and confirmed visible.
+- Invalid interval From 11:00 / Until 10:00 showed "Choose an end 30 to 240 minutes after the start." Venya confirmed focus moved to Until. At 360x800, empty admin create submission displayed required-field errors and focused Name without creating a room.
+
+### Exact-size checks explicitly performed by Venya
+
+- Firefox 360x800: login fit, validation and keyboard outlines; search page controls fit without horizontal scrolling; My Bookings details/actions fit, cancellation dialog fit with Escape/opener restore; admin form/list/Create/Edit fit, required-field errors and Name focus. **Pass for these stated checks.** Complete end-to-end booking/admin writes were exercised earlier in the session, not separately repeated at each exact size.
+- Firefox 1366x768: admin form/list/actions, Find a room and My Bookings fit without horizontal scrolling; login fit and email/password/Sign in keyboard outlines. **Pass for these stated checks.** Dialog/overlap and every control on every page were not separately repeated at this exact size.
+- Chrome 1366x768: **not run**.
+- Chrome 360x800: **not run**.
+
+Screenshots are in `docs/evidence/CRBS-40/`: Firefox About, login with 360x800 toolbar (earlier pre-fix visual evidence), post-fix dialog focus, cancelled booking #18, overlap message and From focus. Cropped screenshots do not establish exact viewport sizes; the size-specific results above are Venya's explicit observations. The dialog ring is visibly present, but its appearance before any Tab was not separately confirmed for a keyboard-opened Firefox dialog. Quantitative contrast measurement and complete post-fix cross-browser signoff remain pending. Do not mark unexecuted matrix entries Passed or infer them from unit tests.
+
 After the requirement PRs merge, execute the checklist in `docs/CRBS-36-keyboard-accessibility.md` at both exact sizes and run the core login/list/search/book/cancel flows in Firefox, recording version, commit, steps, outcome and screenshots. Then update CRBS-36/40 evidence and copy the final results into the formal documents. These notes are ready for review; the pending browser outcomes still prevent a full final test-summary signoff.
