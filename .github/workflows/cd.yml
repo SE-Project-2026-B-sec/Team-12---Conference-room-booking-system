@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      seed:
+        description: "Also load the demo data (prisma db seed) after migrating. Leave off for a normal deploy."
+        type: boolean
+        default: false
 
 jobs:
   # Reuses the CI workflow (jobs "Server" and "Client"); a failure here blocks image build and deploy.
@@ -97,8 +102,22 @@ jobs:
       - name: Pull the commit-tagged image
         run: docker pull "$CRBS_IMAGE"
 
+      # The one-off `migrate` container is built from the Dockerfile's build stage (it has the Prisma CLI,
+      # the runtime image does not). `migrate deploy` only applies pending migrations, so it is safe every time.
+      - name: Apply database migrations
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.deploy.yml build migrate
+          docker compose -f docker-compose.yml -f docker-compose.deploy.yml run --rm migrate
+
+      # Opt-in only: tick "seed" when starting the workflow by hand. Never runs on a push.
+      - name: Seed demo data (optional)
+        if: ${{ inputs.seed }}
+        run: docker compose -f docker-compose.yml -f docker-compose.deploy.yml run --rm migrate npx prisma db seed
+
       - name: Start the application and PostgreSQL
         run: docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d
 
       - name: Smoke test
         run: ./scripts/smoke-test.sh
+        env:
+          SEED_CHECK: ${{ inputs.seed && '1' || '0' }}
