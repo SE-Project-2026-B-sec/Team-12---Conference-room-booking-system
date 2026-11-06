@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, ApiError, errorMessage, type Booking, type Room, type Search, type User } from "./api/client";
 import { istDate, timeOptions, validatePurpose, validateSearch } from "./lib/booking-rules";
 import MyBookings from "./MyBookings";
+import AdminRooms from "./AdminRooms";
 
 function Logo() {
   return <div className="brand"><span className="brand-mark" aria-hidden="true">C<span /></span><span>Conference Room<span className="brand-caption">BOOKING SYSTEM</span></span></div>;
@@ -59,7 +60,7 @@ function Login({ onLogin, initialError }: { onLogin: (user: User) => void; initi
 }
 
 function Rooms({ user, onSignedOut }: { user: User; onSignedOut: (message?: string) => void }) {
-  const [page, setPage] = useState<"rooms" | "bookings">("rooms");
+  const [page, setPage] = useState<"rooms" | "bookings" | "admin">("rooms");
   const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [available, setAvailable] = useState<Room[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,10 +132,9 @@ function Rooms({ user, onSignedOut }: { user: User; onSignedOut: (message?: stri
   }
   return <div className="workspace">
     <aside className="sidebar"><Logo /><div className="nav-caption">WORKSPACE</div><div className="nav-current"><span aria-hidden="true">▦</span> Find a room</div><div className="sidebar-note"><span className="note-dot" />A little planning.<br />A better meeting.<p>Reserve a shared space for your next discussion.</p></div><div className="sidebar-footer">TEAM 12 · SE PROJECT</div></aside>
-    <div className="workspace-body"><header className="topbar"><span className="breadcrumb">Workspace <span>/</span> <strong>{page === "rooms" ? "Rooms" : "My bookings"}</strong></span><div className="user-area"><span className="avatar" aria-hidden="true">{user.name.slice(0, 1).toUpperCase()}</span><span className="user-name">{user.name}</span><button className="text-button" onClick={logout} disabled={busy}>{logoutBusy ? "Signing out…" : "Sign out"}</button></div></header>
-      <nav aria-label="Workspace"><button className="text-button workspace-link" aria-current={page === "rooms" ? "page" : undefined} onClick={() => setPage("rooms")}>Find a room</button><button className="text-button workspace-link" aria-current={page === "bookings" ? "page" : undefined} onClick={() => setPage("bookings")}>My bookings</button></nav>
-      <main className="main-content">{page === "bookings" ? <MyBookings onSignedOut={onSignedOut} /> : <><div className="page-heading"><div><span className="eyebrow">MAKE ROOM FOR GOOD WORK</span><h1>Find your meeting space</h1><p className="muted">A quick catch-up or a big discussion. There’s a room for it.</p></div><span className="timezone-badge">◷ All times in IST</span></div>
-      {logoutError && <p role="alert" className="alert error">{logoutError}</p>}
+    <div className="workspace-body"><header className="topbar"><span className="breadcrumb">Workspace <span>/</span> <strong>{page === "rooms" ? "Rooms" : page === "bookings" ? "My bookings" : "Manage rooms"}</strong></span><div className="user-area"><span className="avatar" aria-hidden="true">{user.name.slice(0, 1).toUpperCase()}</span><span className="user-name">{user.name}</span><button className="text-button" onClick={logout} disabled={busy}>{logoutBusy ? "Signing out…" : "Sign out"}</button></div></header>
+      <nav aria-label="Workspace"><button className="text-button workspace-link" aria-current={page === "rooms" ? "page" : undefined} onClick={() => setPage("rooms")}>Find a room</button><button className="text-button workspace-link" aria-current={page === "bookings" ? "page" : undefined} onClick={() => setPage("bookings")}>My bookings</button>{user.role === "ADMIN" && <button className="text-button workspace-link" aria-current={page === "admin" ? "page" : undefined} onClick={() => setPage("admin")}>Manage rooms</button>}</nav>
+      <main className="main-content">{logoutError && <p role="alert" className="alert error">{logoutError}</p>}{page === "bookings" ? <MyBookings onSignedOut={onSignedOut} /> : page === "admin" ? <AdminRooms user={user} onSignedOut={onSignedOut} onRoomsChanged={() => setReload((n) => n + 1)} /> : <><div className="page-heading"><div><span className="eyebrow">MAKE ROOM FOR GOOD WORK</span><h1>Find your meeting space</h1><p className="muted">A quick catch-up or a big discussion. There’s a room for it.</p></div><span className="timezone-badge">◷ All times in IST</span></div>
       {success && <div role="status" className="alert success"><strong>Booking confirmed · #{success.booking.bookingId}</strong><span>{success.room.name} · {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(success.booking.startAt))} – {new Intl.DateTimeFormat("en-IN", { timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(success.booking.endAt))} IST</span></div>}
       <form className="search-panel" onSubmit={findRooms} noValidate><div className="panel-heading"><h2>When do you need a room?</h2><span>09:00–18:00 · 30-minute slots</span></div><fieldset className="search-grid" disabled={busy || loading}><legend className="sr-only">Search availability</legend>
         <div className="field"><label htmlFor="date">Date</label><input id="date" type="date" min={istDate()} max={istDate(30)} value={search.date} onChange={(e) => change("date", e.target.value)} aria-invalid={!!errors.date} aria-describedby={errors.date ? "date-error" : undefined} /><FieldError id="date-error" message={errors.date} /></div>
