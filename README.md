@@ -121,11 +121,39 @@ cd client && npm install && npm run dev
 
 Scripts available in both `client/` and `server/`: `npm run dev`, `npm run build`, `npm run lint`, `npm test`.
 
+### First run (local development)
+
+A new database is empty; create the schema and (optionally) the demo data once:
+
+```bash
+cp .env.example .env                      # then edit the dev values if you like; never commit .env
+docker compose up -d db                   # PostgreSQL, published on 127.0.0.1:5432
+cd server
+npm install
+npx prisma generate                       # generate the Prisma client
+npx prisma migrate deploy                 # create the tables (safe to repeat)
+npx prisma db seed                        # optional: demo users, rooms and one booking
+npm run dev                               # API on http://localhost:3000
+# in another terminal: cd client && npm install && npm run dev
+```
+
+Seeded demo accounts (synthetic, for local use only):
+
+| Role | Email | Password |
+| --- | --- | --- |
+| User | `demo.user@example.com` | `User123!@#` |
+| Administrator | `demo.admin@example.com` | `Admin123!@#` |
+
+`DATABASE_URL` differs by where the code runs: on the host (npm commands above) it uses `localhost:5432`, as in `.env.example`. Inside Docker Compose the `app` and `migrate` services override it to use the host name `db`, so you do not edit it for Compose.
+
+To start over with an empty database: `docker compose down -v` (deletes the `pgdata` volume), then repeat the steps above. Integration tests use a separate `crbs_test` database; see "Integration tests".
+
 ### Docker Compose
 
 ```bash
 cp .env.example .env
 docker compose up --build      # app on http://localhost:3000, PostgreSQL as service `db`
+docker compose run --rm migrate   # first time only: create the tables (see First run for seeding)
 curl http://localhost:3000/api/health
 docker compose down            # add -v to also delete the database volume
 ```
@@ -153,7 +181,7 @@ Without `DATABASE_URL_TEST` (or the schema), `bookings.test.ts` fails with a cle
 
 1. **ci** reuses `ci.yml` (jobs `Server` and `Client`). If any test fails, nothing below runs.
 2. **build-image** builds the `Dockerfile` and pushes `ghcr.io/<owner>/<repo>:<commit-sha>` and `:latest` using the built-in `GITHUB_TOKEN` (the image reference is printed in the job summary).
-3. **deploy** pulls the commit-tagged image, starts it with `docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d` and runs `scripts/smoke-test.sh`. It is **skipped by default**.
+3. **deploy** pulls the commit-tagged image, applies pending database migrations (`migrate` service, see below), starts the app with `docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d` and runs `scripts/smoke-test.sh`. It is **skipped by default**.
 
 **Enable the self-hosted deploy job:** register a self-hosted runner (needs repo admin; Docker must be running on that machine), put your real environment file at `~/crbs.env` on the runner machine (copy of `.env.example`; or set the repo variable `DEPLOY_ENV_FILE` to another path; it is never stored in git), then set the repository variable `DEPLOY_ENABLED` to `true` (Settings > Secrets and variables > Actions > Variables).
 
@@ -161,7 +189,8 @@ Without `DATABASE_URL_TEST` (or the schema), `bookings.test.ts` fails with a cle
 
 ```bash
 cp .env.example .env                 # once
-./scripts/deploy-local.sh            # builds crbs-app:<HEAD sha> locally, starts it, runs the smoke test
+./scripts/deploy-local.sh            # builds crbs-app:<HEAD sha> locally, migrates the database, starts it, runs the smoke test
+./scripts/deploy-local.sh --seed     # same, plus loads the demo data once and checks a demo sign-in
 ./scripts/deploy-local.sh <sha>      # a specific commit
 ./scripts/deploy-local.sh <sha> --pull   # use the ghcr.io image instead of building
 docker compose down                  # stop everything afterwards
@@ -169,7 +198,8 @@ docker compose down                  # stop everything afterwards
 
 `scripts/smoke-test.sh [base-url]` can be run against any running instance (default `http://localhost:3000`): it waits up to 30 s, then checks `GET /api/health` returns 200 and `GET /api/rooms` without a session returns 401 with the standard error JSON.
 
-**ghcr.io package visibility:** new packages are private. To change it, open the repository's Packages, select the package, then Package settings > Danger Zone > Change visibility (needs admin rights on the package). A private image needs `docker login ghcr.io` with a token that has `read:packages` before `--pull` works on another machine. The database schema is not migrated by the deploy; run `prisma migrate deploy` against the deployed database separately (to confirm for the demo setup).
+**ghcr.io package visibility:** new packages are private. To change it, open the repository's Packages, select the package, then Package settings > Danger Zone > Change visibility (needs admin rights on the package). A private image needs `docker login ghcr.io` with a token that has `read:packages` before `--pull` works on another machine. 
+**Migrations and seed in deploys:** every deploy (script or workflow) runs `prisma migrate deploy` before starting the app, so a fresh database gets its tables and a repeat run does nothing. The runtime image has no Prisma CLI, so this runs in a one-off `migrate` container (`docker-compose.yml`, profile `tools`) built from the Dockerfile's `server-build` stage. Seeding is never automatic: use `./scripts/deploy-local.sh --seed`, or tick **seed** when you start the CD workflow by hand (the deploy job also needs `DEPLOY_ENABLED=true`). With seeding on, the smoke test also signs in as the demo user (`SEED_CHECK=1`).
 
 ## Contributing: branches, commits and PRs
 
