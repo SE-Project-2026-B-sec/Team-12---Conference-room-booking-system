@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import MyBookings from "./MyBookings";
 import { api, ApiError, type OwnedBooking } from "./api/client";
@@ -48,7 +48,7 @@ describe("TC10 / TC11 / TC12 My Bookings and cancellation UI", () => {
   it("updates status only after the cancellation succeeds", async () => {
     await confirm(); fireEvent.click(screen.getByRole("button", { name: "Yes, cancel booking" }));
     await screen.findByText(/Booking #12 cancelled/); expect(api.cancelBooking).toHaveBeenCalledWith(12);
-    expect(document.activeElement).toBe(screen.getByRole("status"));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("status")));
     expect(screen.getByText("Cancelled")).toBeTruthy(); expect(screen.queryByRole("button", { name: "Cancel booking #12" })).toBeNull();
   });
   it("does not offer cancellation for started or cancelled bookings", async () => {
