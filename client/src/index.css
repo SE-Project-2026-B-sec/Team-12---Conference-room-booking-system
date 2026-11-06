@@ -869,3 +869,17 @@ width:100%
 }
 
 }
+
+/* CRBS-27: navigation remains available when the desktop sidebar is hidden. */
+nav[aria-label="Workspace"] { display:flex; flex-wrap:wrap; gap:12px; padding:14px 30px; border-bottom:1px solid #dbe2dc; background:white; }
+.workspace-link { padding:8px 12px; border-radius:6px; }
+.workspace-link[aria-current="page"] { background:#e7efe8; color:#164b39; font-weight:700; }
+.secondary-screen { min-width:0; }
+.booking-list { display:grid; gap:16px; margin-top:22px; }
+.booking-summary { display:grid; gap:10px; padding:22px; border:1px solid #dbe2dc; border-radius:12px; background:white; overflow-wrap:anywhere; }
+.booking-summary .button { justify-self:start; }
+.booking-purpose { white-space:pre-wrap; }
+.confirmation-dialog { width:min(500px,calc(100% - 32px)); max-height:calc(100dvh - 32px); overflow:auto; padding:26px; border:1px solid #c3d4c8; border-radius:12px; color:#253c34; }
+.confirmation-dialog p { margin:16px 0 22px; line-height:1.6; }
+.confirmation-dialog::backdrop { background:#10291dcc; }
+@media(max-width:600px) { nav[aria-label="Workspace"] { padding:10px 16px; gap:4px; } .secondary-screen .results-header { align-items:stretch; flex-direction:column; gap:16px; } .booking-summary { padding:16px; } }

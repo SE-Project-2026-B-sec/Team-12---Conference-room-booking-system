@@ -4,6 +4,17 @@ import { api, ApiError } from "./client";
 afterEach(() => vi.unstubAllGlobals());
 const json = (body: unknown, status = 200, token?: string) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...(token ? { "x-csrf-token": token } : {}) } });
 describe("TC04 / TC16 API cookies and CSRF integration contract", () => {
+  it("TC10 / TC11 uses authenticated GET and CSRF-protected PATCH cancellation contracts", async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(json({ id: 1 }, 200, "cancel-token"))
+      .mockResolvedValueOnce(json({ bookings: [] })).mockResolvedValueOnce(json({ bookingId: 12, status: "CANCELLED" }));
+    vi.stubGlobal("fetch", fetcher);
+    await api.me(); await api.myBookings(); await api.cancelBooking(12);
+    expect(fetcher.mock.calls[1][0]).toBe("/api/bookings");
+    expect(fetcher.mock.calls[2][0]).toBe("/api/bookings/12/cancel");
+    expect(fetcher.mock.calls[2][1].method).toBe("PATCH");
+    expect(fetcher.mock.calls[2][1].headers.get("x-csrf-token")).toBe("cancel-token");
+    expect(fetcher.mock.calls[2][1].credentials).toBe("same-origin");
+  });
   it("carries the login response CSRF token on booking and logout writes", async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(json({ id: 1 }, 200, "synthetic-token")).mockResolvedValueOnce(json({ bookingId: 1 })).mockResolvedValueOnce(json({ status: "ok" }));
     vi.stubGlobal("fetch", fetcher);
