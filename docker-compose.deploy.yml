@@ -1,0 +1,7 @@
+# Deploy override: run the pre-built, commit-tagged image instead of building from source.
+#   CRBS_IMAGE=ghcr.io/<owner>/<repo>:<sha> docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d
+services:
+  app:
+    image: ${CRBS_IMAGE:?set CRBS_IMAGE to the image to deploy}
+    build: !reset null
+    pull_policy: never # the image is pulled (or built locally) before `up`

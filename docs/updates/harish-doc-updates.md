@@ -28,6 +28,7 @@ Tests run against a real PostgreSQL test database. Counts are test cases in the 
 | FR12 Admin creates room | TC13, TC14 | `server/tests/admin-rooms.test.ts` | TC13: 17, TC14: 3 |
 | FR13 Admin updates room | TC13, TC14 | `server/tests/admin-rooms-update.test.ts` | TC13: 25, TC14: 3 |
 | FR14 Persistence and atomic writes | TC15 | `server/tests/booking-atomicity.test.ts` | TC15: 4 |
+| CRBS-37 CD pipeline | TC20 | `.github/workflows/cd.yml`, `scripts/smoke-test.sh`; evidence = the cd.yml run link and the smoke-test output (to attach after the first run on `main`) | n/a (workflow) |
 | NFR02 Reliability / integrity | TC09, TC15 | `booking-concurrency.test.ts`, `booking-atomicity.test.ts` | 5 + 4 |
 
 Notes for the RTM:
@@ -63,3 +64,11 @@ Notes for the RTM:
 | rooms.test.ts | 9 |
 
 For my stories: TC04 (3), TC05 (13), TC09 (5), TC13 (42), TC14 (6) and TC15 (4) all pass. Client tests were not run for this note.
+
+## (e) SAD deployment note (CRBS-37)
+
+- One Docker image holds the API and the built client (`Dockerfile`, port 3000). `docker-compose.yml` starts it with PostgreSQL 16; `docker-compose.deploy.yml` overrides the app service to run a pre-built image (`CRBS_IMAGE`) instead of building.
+- On every push to `main`, the `CD` workflow first reuses the CI workflow (jobs `Server` and `Client`); only if it passes does it build the image and push `ghcr.io/<owner>/<repo>:<commit-sha>` (and `:latest`) using `GITHUB_TOKEN`.
+- Deployment to a team laptop is a separate job on a self-hosted runner, enabled with the repository variable `DEPLOY_ENABLED=true`; it is skipped by default. Without a runner, `scripts/deploy-local.sh` does the same steps by hand.
+- After starting the containers, `scripts/smoke-test.sh` checks `GET /api/health` (200) and `GET /api/rooms` without a session (401 with the standard error shape). A failed smoke test fails the deploy job. Recovery is manual: deploy an earlier commit's image tag.
+- Database migrations are not applied automatically by the deploy (to confirm for the demo setup).

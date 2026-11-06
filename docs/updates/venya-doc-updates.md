@@ -5,7 +5,7 @@ Prepared 5 November 2026 from the merged API contracts and Venya's requirement b
 ## Source and review order
 
 - CRBS-27: `f718d92`, PR #22. My Bookings and cancellation. 46 client tests, build and lint passed; GitHub CI run 42067344307 passed for that commit.
-- CRBS-30: `2665e5f`, PR #23, built on CRBS-27. Admin create/edit/list. 68 client tests, build and lint passed locally.
+- CRBS-30: PR #23 / merge commit `d9f8f38`, merged on main after CRBS-27. Admin create/edit/list. 68 client tests, build and lint passed locally.
 - CRBS-36: `3f961ed`, built on CRBS-30. Keyboard/focus implementation. 71 client tests, build and lint passed locally. Exact required viewports remain unverified.
 - Review and merge the requirement PRs in order. PRs based on another requirement branch need retargeting to main after that branch merges; the current CI workflow only triggers for PRs targeting main. Do not copy a local test result into the GitHub CI column.
 
@@ -52,7 +52,7 @@ UI unit checks currently total **71 passed**, across App, MyBookings, AdminRooms
 - The Test Plan's TC12 expects 403 for another user's booking, while the merged CRBS-25/26 API deliberately hides such records with 404. This is a backend-owned baseline alignment question; I did not change the endpoint behavior. Align the final RTM/SRS/SAD with the agreed owner decision.
 - Retain exact viewport and Firefox cases as pending until real execution evidence is supplied.
 - CRBS-42's Sprint 1 video is merged; the two-minute Sprint 2 recording is still required. Venya intends to record it herself.
-- CD/deployment evidence is still owned by Harish. Only ci.yml is currently present; no deployment success is claimed in these UI notes.
+- CD/deployment evidence is owned by Harish. The CD pipeline (PR #28) is merged on main and its first run was green, as reported by Harish. The self-hosted deploy job remains gated by DEPLOY_ENABLED; a green pipeline run is not, by itself, proof that a deployment ran. See docs/updates/harish-doc-updates.md for deployment evidence.
 
 ## Browser acceptance handoff
 
