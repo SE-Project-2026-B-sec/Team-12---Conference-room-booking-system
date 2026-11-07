@@ -210,6 +210,85 @@ describe("CRBS-14 / CRBS-15: Login Authentication & Security", () => {
       const meRes = await agent.get("/api/auth/me");
       expect(meRes.status).toBe(401);
     });
+
+    it("invalidates session in the server store so a captured cookie cannot be reused after logout", async () => {
+      const app = getTestApp();
+      const agent = request.agent(app);
+
+      const loginRes = await agent
+        .post("/api/auth/login")
+        .send({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+
+      const csrfToken = loginRes.headers["x-csrf-token"];
+      const cookieHeader = loginRes.headers["set-cookie"]?.find((c: string) => c.startsWith("crbs.sid="));
+      expect(cookieHeader).toBeDefined();
+
+      // Logout with valid CSRF token
+      await agent
+        .post("/api/auth/logout")
+        .set("x-csrf-token", csrfToken);
+
+      // Replay captured session cookie in a separate unauthenticated request
+      const replayRes = await request(app)
+        .get("/api/auth/me")
+        .set("Cookie", cookieHeader!);
+
+      expect(replayRes.status).toBe(401);
+      expect(replayRes.body).toEqual({
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required.",
+        },
+      });
+    });
+  });
+
+  describe("Session Lifecycle & 30-Minute Expiration (SR03 / TC16)", () => {
+    it("preserves active session within the 30-minute idle window", async () => {
+      const app = getTestApp();
+      const agent = request.agent(app);
+
+      await agent
+        .post("/api/auth/login")
+        .send({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+
+      // Advance by 15 minutes (less than the 30-minute maxAge)
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(Date.now() + 15 * 60 * 1000));
+
+      const meRes = await agent.get("/api/auth/me");
+      expect(meRes.status).toBe(200);
+      expect(meRes.body.email).toBe(DEMO_EMAIL);
+
+      vi.useRealTimers();
+    });
+
+    it("expires the session after 30 minutes of inactivity and rejects with 401", async () => {
+      const app = getTestApp();
+      const agent = request.agent(app);
+
+      await agent
+        .post("/api/auth/login")
+        .send({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+
+      const initialMe = await agent.get("/api/auth/me");
+      expect(initialMe.status).toBe(200);
+
+      // Advance past the 30-minute session expiry threshold (31 minutes)
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(Date.now() + 31 * 60 * 1000));
+
+      const expiredMe = await agent.get("/api/auth/me");
+      expect(expiredMe.status).toBe(401);
+      expect(expiredMe.body).toEqual({
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required.",
+        },
+      });
+
+      vi.useRealTimers();
+    });
   });
 
   describe("Security: Rate Limiting on Failed Logins (TC16 / SR04)", () => {
@@ -303,6 +382,39 @@ describe("CRBS-14 / CRBS-15: Login Authentication & Security", () => {
 
       limiter.destroy();
     });
+
+    it("allows login attempts after the 15-minute rate limit window expires", async () => {
+      const app = getTestApp();
+
+      // 5 failed login attempts
+      for (let i = 0; i < 5; i++) {
+        const res = await request(app)
+          .post("/api/auth/login")
+          .send({ email: DEMO_EMAIL, password: "WrongPassword" });
+        expect(res.status).toBe(401);
+      }
+
+      // 6th attempt is blocked with 429
+      const blockedRes = await request(app)
+        .post("/api/auth/login")
+        .send({ email: DEMO_EMAIL, password: "WrongPassword" });
+      expect(blockedRes.status).toBe(429);
+      expect(blockedRes.body.error.code).toBe("TOO_MANY_REQUESTS");
+
+      // Advance time by 15 minutes + 1 second
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(Date.now() + 15 * 60 * 1000 + 1000));
+
+      // Attempt after expiry is permitted and succeeds with valid credentials
+      const afterExpiryRes = await request(app)
+        .post("/api/auth/login")
+        .send({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+
+      expect(afterExpiryRes.status).toBe(200);
+      expect(afterExpiryRes.body.email).toBe(DEMO_EMAIL);
+
+      vi.useRealTimers();
+    });
   });
 
   describe("Security: CSRF Protection on Authenticated Writes (SR03 / TC16)", () => {
@@ -348,6 +460,60 @@ describe("CRBS-14 / CRBS-15: Login Authentication & Security", () => {
 
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe("FORBIDDEN");
+    });
+
+    it("accepts authenticated state-changing writes when valid CSRF token is provided via x-csrf-token header", async () => {
+      const app = getTestApp();
+      const agent = request.agent(app);
+
+      const loginRes = await agent
+        .post("/api/auth/login")
+        .send({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+      const csrfToken = loginRes.headers["x-csrf-token"];
+      expect(csrfToken).toBeDefined();
+
+      const logoutRes = await agent
+        .post("/api/auth/logout")
+        .set("x-csrf-token", csrfToken);
+
+      expect(logoutRes.status).toBe(200);
+      expect(logoutRes.body.status).toBe("ok");
+    });
+
+    it("accepts authenticated state-changing writes when valid CSRF token is provided via csrf-token header", async () => {
+      const app = getTestApp();
+      const agent = request.agent(app);
+
+      const loginRes = await agent
+        .post("/api/auth/login")
+        .send({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+      const csrfToken = loginRes.headers["x-csrf-token"];
+      expect(csrfToken).toBeDefined();
+
+      const logoutRes = await agent
+        .post("/api/auth/logout")
+        .set("csrf-token", csrfToken);
+
+      expect(logoutRes.status).toBe(200);
+      expect(logoutRes.body.status).toBe("ok");
+    });
+
+    it("accepts authenticated state-changing writes when valid CSRF token is provided via _csrf request body", async () => {
+      const app = getTestApp();
+      const agent = request.agent(app);
+
+      const loginRes = await agent
+        .post("/api/auth/login")
+        .send({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+      const csrfToken = loginRes.headers["x-csrf-token"];
+      expect(csrfToken).toBeDefined();
+
+      const logoutRes = await agent
+        .post("/api/auth/logout")
+        .send({ _csrf: csrfToken });
+
+      expect(logoutRes.status).toBe(200);
+      expect(logoutRes.body.status).toBe("ok");
     });
 
     it("provides GET /api/auth/csrf to retrieve current session CSRF token", async () => {
