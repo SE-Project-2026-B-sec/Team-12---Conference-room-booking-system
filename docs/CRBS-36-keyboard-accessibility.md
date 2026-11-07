@@ -13,7 +13,7 @@ Branch `CRBS-36-focus-ring-fix` starts from main `145ec51`, after PR #25 (merge 
 - Opening cancellation explicitly focuses Keep booking. Escape still closes without a cancellation request and returns focus to the opener.
 - Local client lint and production build passed; 72 client tests passed, including initial document focus/first control and initial Keep booking focus regression checks.
 - In-app browser at an observed 1280x720: fresh authenticated reload followed by Tab reached Skip to main content, then Sign out. Computed outlines were dark `rgb(18, 62, 50)` with a white separator. Visual inspection confirmed the skip-link ring. Workspace navigation focused main; keyboard opening of booking #17's dialog focused Keep booking with the dark outline immediately. Escape closed the dialog and returned focus to Cancel booking #17; no booking was cancelled. Screenshot: `docs/evidence/CRBS-36-dialog-focus-fix.png`.
-- These are in-app browser results, not a new Chrome/Firefox acceptance pass. Firefox-specific rendering of the fix and exact 360x800/1366x768 retests remain pending. Harish reported pre-fix checks in Chromium 158 at both sizes and Firefox 159 at 1366x768; those results identified the defects, and are not recorded as post-fix evidence.
+- The in-app observations above are distinct from browser acceptance evidence. Harish subsequently reported passing post-fix PR-branch checks in Chromium 158 and Firefox 159. Venya's guided Chrome/Firefox results are recorded below with their exact-size scope; see Retest results and evidence. Earlier pre-fix findings remain historical defect evidence.
 
 ## Verified on 5 November 2026
 
@@ -22,11 +22,11 @@ Branch `CRBS-36-focus-ring-fix` starts from main `145ec51`, after PR #25 (merge 
 - Keyboard cancellation: native modal, Keep booking, Escape restore and status focus were verified. A final check with synthetic booking #14 confirmed Tab => Yes cancel, Tab => Keep booking, Shift+Tab => Yes cancel. The final booking was then cancelled successfully.
 - JSON observation trace is `docs/evidence/CRBS-36-keyboard.json`.
 
-## Acceptance still pending
+## Retest results and evidence
 
-The original 5 November viewport overrides did not establish the required actual dimensions. Firefox 159.0.1 (64-bit) is now installed, confirmed by Venya's About screenshot. Her pre-fix Firefox 360x800 screenshots show login, search, booking #17 confirmation, cancellation dialog and cancellation feedback; they do not prove the corrected focus styles. Harish has also reported the pre-fix checks listed above. Post-fix exact-size and Firefox validation remain **NOT VERIFIED**. Unit tests do not prove browser focus rendering or mobile layout.
+The 5 November override failure is historical, not the current retest status. On 7 November, Harish reported that his run on the PR #30 focus-fix branch passed in Chromium 158 and Firefox 159. This is attributed team-reported evidence; the raw run log and exact viewport breakdown were not supplied in that update. Venya also completed guided manual checks on focus-fix commit f63fc0e in Firefox 159.0.1 (64-bit) and Chrome 157.0.8103.39 (64-bit), including the immediate dialog ring, Tab loop, Escape/opener return, first workspace Tab stop, core flows, validation and explicitly recorded 360x800/1366x768 layout checks. Results, size-specific scope and six screenshots are merged via PR #33 in docs/updates/venya-doc-updates.md under NFR03 / NFR04 acceptance evidence and docs/evidence/CRBS-40/. Checks not separately repeated at an exact size remain NOT RUN in that matrix; do not expand the reported passes into a claim that every combination was rerun. Unit tests do not replace browser evidence.
 
-Before marking Done, check in browser responsive/device tools at exactly **360x800**, then **1366x768**:
+Repeatable regression checklist for browser responsive/device tools at exactly **360x800**, then **1366x768**:
 
 1. Record browser version and confirm the displayed CSS viewport dimensions.
 2. Keyboard-only sign in: Tab/Shift+Tab through labelled inputs and submit with Enter.
@@ -37,4 +37,4 @@ Before marking Done, check in browser responsive/device tools at exactly **360x8
 7. As admin, create/edit a synthetic room using keyboard; verify required/invalid fields and visible feedback. As ordinary user, confirm admin navigation is absent.
 8. At both sizes check for horizontal clipping, inaccessible controls and visible focus throughout. Keep screenshots and actual results. Do not mark unexecuted steps Passed.
 
-The original stack is merged. Review this follow-up against main and wait for Server/Client CI; retain the pending post-fix manual acceptance checks above.
+PR #25 (8756e83), focus follow-up PR #30 and manual evidence PR #33 are merged. Use the recorded retests above and retain the evidence matrix limitations when preparing final test results.
