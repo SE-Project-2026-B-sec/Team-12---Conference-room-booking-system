@@ -11,6 +11,8 @@ import { csrfProtection } from "./middleware/csrf.js";
 
 export interface AppOptions extends SessionOptionsConfig {
   trustProxy?: boolean | number | string;
+  /** Controlled test-only seam to verify central 500 error handling without exposing a production endpoint */
+  testFaultRoute?: (req: Request, res: Response, next: NextFunction) => void;
 }
 
 export function createApp(options?: AppOptions) {
@@ -47,6 +49,11 @@ export function createApp(options?: AppOptions) {
   app.use("/api/bookings", bookingsRouter);
   app.use("/api/admin/rooms", adminRoomsRouter);
 
+  // Controlled test-only seam for verifying central 500 handling without exposing a production endpoint
+  if (options?.testFaultRoute) {
+    app.get("/api/test-fault", options.testFaultRoute);
+  }
+
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: { code: "NOT_FOUND", message: "Resource not found" } });
   });
@@ -58,9 +65,16 @@ export function createApp(options?: AppOptions) {
     app.get("/{*splat}", (_req, res) => res.sendFile(path.join(publicDir, "index.html")));
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    if (typeof err === "object" && err !== null && (err as { type?: string }).type === "entity.parse.failed") {
+    if (res.headersSent) {
+      return _next(err);
+    }
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      ((err as { type?: string }).type === "entity.parse.failed" ||
+        (err instanceof SyntaxError && (err as { status?: number }).status === 400 && "body" in err))
+    ) {
       res.status(400).json({ error: { code: "BAD_REQUEST", message: "Malformed JSON body" } });
       return;
     }
