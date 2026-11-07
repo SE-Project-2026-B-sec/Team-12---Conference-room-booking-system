@@ -2,7 +2,18 @@
 
 Implemented skip links, focusable main content, focus after screen navigation, search-result focus, automatic meeting-purpose focus, return focus on cancelling a room selection, validation focus, and focus on success/error feedback. Required login fields are explained and booking purpose is exposed as required. Admin fields already have required labels and connected errors.
 
-The native cancellation dialog initially focuses Keep booking. Tab and Shift+Tab explicitly wrap through the enabled dialog buttons; Escape dismisses without a request and restores the opener. While cancellation is pending, focus remains in the dialog and Escape cannot dismiss it. Success then focuses its visible status message. Inputs, buttons and links have a dark high-contrast visible focus ring. Navigation remains available when the desktop sidebar is hidden; narrow containers and long text can wrap.
+The native cancellation dialog explicitly focuses Keep booking when opened. Tab and Shift+Tab wrap through the enabled dialog buttons; Escape dismisses without a request and restores the opener. While cancellation is pending, focus remains in the dialog and Escape cannot dismiss it. Success then focuses its visible status message. Navigation remains available when the desktop sidebar is hidden; narrow containers and long text can wrap. The original dark-ring claim was incorrect for buttons/links because an older, more-specific rule overrode it; see the follow-up below.
+
+## Focus follow-up on 6 November 2026
+
+Branch `CRBS-36-focus-ring-fix` starts from main `145ec51`, after PR #25 (merge `8756e83`) and PR #26 merged.
+
+- Removed the older pale button/link outline rule. Explicit button/link focus-visible selectors now apply the dark `#123e32` ring with a white separator. The skip link and dialog buttons also receive this ring on `:focus`, so programmatic initial dialog focus does not depend on Firefox's focus-visible heuristic. Existing input focus styling remains unchanged.
+- Initial workspace rendering no longer focuses main. The previous-page ref compares actual navigation changes, including under Strict Mode; navigation to another workspace screen still focuses main.
+- Opening cancellation explicitly focuses Keep booking. Escape still closes without a cancellation request and returns focus to the opener.
+- Local client lint and production build passed; 72 client tests passed, including initial document focus/first control and initial Keep booking focus regression checks.
+- In-app browser at an observed 1280x720: fresh authenticated reload followed by Tab reached Skip to main content, then Sign out. Computed outlines were dark `rgb(18, 62, 50)` with a white separator. Visual inspection confirmed the skip-link ring. Workspace navigation focused main; keyboard opening of booking #17's dialog focused Keep booking with the dark outline immediately. Escape closed the dialog and returned focus to Cancel booking #17; no booking was cancelled. Screenshot: `docs/evidence/CRBS-36-dialog-focus-fix.png`.
+- These are in-app browser results, not a new Chrome/Firefox acceptance pass. Firefox-specific rendering of the fix and exact 360x800/1366x768 retests remain pending. Harish reported pre-fix checks in Chromium 158 at both sizes and Firefox 159 at 1366x768; those results identified the defects, and are not recorded as post-fix evidence.
 
 ## Verified on 5 November 2026
 
@@ -13,7 +24,7 @@ The native cancellation dialog initially focuses Keep booking. Tab and Shift+Tab
 
 ## Acceptance still pending
 
-The required viewport checks are **NOT VERIFIED**. The browser tool accepted 360x800 and 1366x768 overrides, but the page reported 678x668; a fresh tab reported 1280x720. The override did not establish the required dimensions, so those checks are not counted as passed. Firefox is also not installed and has not been tested. Unit tests do not prove browser focus rendering or mobile layout.
+The original 5 November viewport overrides did not establish the required actual dimensions. Firefox 159.0.1 (64-bit) is now installed, confirmed by Venya's About screenshot. Her pre-fix Firefox 360x800 screenshots show login, search, booking #17 confirmation, cancellation dialog and cancellation feedback; they do not prove the corrected focus styles. Harish has also reported the pre-fix checks listed above. Post-fix exact-size and Firefox validation remain **NOT VERIFIED**. Unit tests do not prove browser focus rendering or mobile layout.
 
 Before marking Done, check in browser responsive/device tools at exactly **360x800**, then **1366x768**:
 
@@ -26,4 +37,4 @@ Before marking Done, check in browser responsive/device tools at exactly **360x8
 7. As admin, create/edit a synthetic room using keyboard; verify required/invalid fields and visible feedback. As ordinary user, confirm admin navigation is absent.
 8. At both sizes check for horizontal clipping, inaccessible controls and visible focus throughout. Keep screenshots and actual results. Do not mark unexecuted steps Passed.
 
-PR is built on CRBS-30, which is built on CRBS-27. Review/merge the stack in that order and run main-targeting CI before each merge.
+The original stack is merged. Review this follow-up against main and wait for Server/Client CI; retain the pending post-fix manual acceptance checks above.

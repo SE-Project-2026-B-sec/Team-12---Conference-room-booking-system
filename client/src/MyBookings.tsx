@@ -14,6 +14,7 @@ export default function MyBookings({ onSignedOut }: { onSignedOut: (message?: st
   const [now, setNow] = useState(() => Date.now());
   const feedback = useRef<HTMLParagraphElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  const keepBooking = useRef<HTMLButtonElement>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -35,7 +36,10 @@ export default function MyBookings({ onSignedOut }: { onSignedOut: (message?: st
 
   useEffect(() => {
     const element = dialog.current;
-    if (target && element && !element.open) element.showModal();
+    if (target && element && !element.open) {
+      element.showModal();
+      keepBooking.current?.focus();
+    }
     if (!target && element?.open) { element.close(); opener.current?.focus(); }
   }, [target]);
 
@@ -105,7 +109,7 @@ export default function MyBookings({ onSignedOut }: { onSignedOut: (message?: st
       onCancel={(event) => { if (busy) event.preventDefault(); else setTarget(null); }}>
       <h2 id="cancel-title">Cancel this booking?</h2>
       <p id="cancel-description">{target?.room.name} · Booking #{target?.id}. This releases the room for other users.</p>
-      <div className="booking-actions"><button className="button secondary" disabled={busy} onClick={() => setTarget(null)}>Keep booking</button>
+      <div className="booking-actions"><button ref={keepBooking} className="button secondary" disabled={busy} onClick={() => setTarget(null)}>Keep booking</button>
         <button className="button primary" disabled={busy} onClick={cancel}>{busy ? "Cancelling…" : "Yes, cancel booking"}</button></div>
     </dialog>
   </section>;

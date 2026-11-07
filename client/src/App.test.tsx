@@ -64,6 +64,12 @@ describe("TC16 / login and session UI", () => {
 });
 
 describe("TC01 / TC02 room listing and search", () => {
+  it("TC18 leaves initial workspace focus at the document with the skip link first", async () => {
+    await readyRooms();
+    expect(document.activeElement).toBe(document.body);
+    const firstControl = document.querySelector("a[href], button, input, select, textarea");
+    expect(firstControl).toBe(screen.getByRole("link", { name: "Skip to main content" }));
+  });
   it("shows room fields and prevents booking before availability is checked", async () => {
     await readyRooms();
     expect(screen.getByText("First Floor")).toBeTruthy();

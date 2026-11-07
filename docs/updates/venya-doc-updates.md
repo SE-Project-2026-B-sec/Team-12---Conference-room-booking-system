@@ -6,7 +6,7 @@ Prepared 5 November 2026 from the merged API contracts and Venya's requirement b
 
 - CRBS-27: `f718d92`, PR #22. My Bookings and cancellation. 46 client tests, build and lint passed; GitHub CI run 42067344307 passed for that commit.
 - CRBS-30: PR #23 / merge commit `d9f8f38`, merged on main after CRBS-27. Admin create/edit/list. 68 client tests, build and lint passed locally.
-- CRBS-36: `3f961ed`, built on CRBS-30. Keyboard/focus implementation. 71 client tests, build and lint passed locally. Exact required viewports remain unverified.
+- CRBS-36: PR #25 / merge commit `8756e83`. Keyboard/focus implementation. 71 client tests, build and lint passed before merge. The focused follow-up `CRBS-36-focus-ring-fix` corrects overridden button/link outlines, initial workspace focus and initial dialog-button focus; local lint/build and 72 tests pass. Post-fix Chrome/Firefox acceptance is still pending; see `docs/CRBS-36-keyboard-accessibility.md`.
 - Review and merge the requirement PRs in order. PRs based on another requirement branch need retargeting to main after that branch merges; the current CI workflow only triggers for PRs targeting main. Do not copy a local test result into the GitHub CI column.
 
 ## SAD API rows used by the frontend
