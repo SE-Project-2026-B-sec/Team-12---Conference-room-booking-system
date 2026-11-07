@@ -13,7 +13,7 @@ Branch `CRBS-36-focus-ring-fix` starts from main `145ec51`, after PR #25 (merge 
 - Opening cancellation explicitly focuses Keep booking. Escape still closes without a cancellation request and returns focus to the opener.
 - Local client lint and production build passed; 72 client tests passed, including initial document focus/first control and initial Keep booking focus regression checks.
 - In-app browser at an observed 1280x720: fresh authenticated reload followed by Tab reached Skip to main content, then Sign out. Computed outlines were dark `rgb(18, 62, 50)` with a white separator. Visual inspection confirmed the skip-link ring. Workspace navigation focused main; keyboard opening of booking #17's dialog focused Keep booking with the dark outline immediately. Escape closed the dialog and returned focus to Cancel booking #17; no booking was cancelled. Screenshot: `docs/evidence/CRBS-36-dialog-focus-fix.png`.
-- These are in-app browser results, not a new Chrome/Firefox acceptance pass. Firefox-specific rendering of the fix and exact 360x800/1366x768 retests remain pending. Harish reported pre-fix checks in Chromium 158 at both sizes and Firefox 159 at 1366x768; those results identified the defects, and are not recorded as post-fix evidence.
+- The in-app observations above are distinct from browser acceptance evidence. Harish subsequently reported passing post-fix PR-branch checks in Chromium 158 and Firefox 159. Venya's guided Chrome/Firefox results are recorded below with their exact-size scope; see Retest results and evidence. Earlier pre-fix findings remain historical defect evidence.
 
 ## Verified on 5 November 2026
 
