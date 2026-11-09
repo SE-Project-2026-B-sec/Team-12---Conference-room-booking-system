@@ -1,0 +1,36 @@
+{
+  "commit": "ac1cf63",
+  "initial": {
+    "users": 5,
+    "rooms": 5,
+    "bookings": 100
+  },
+  "workers": 5,
+  "warmupSeconds": 10,
+  "seconds": 120.5327633,
+  "host": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "cpu": "11th Gen Intel(R) Core(TM) i5-11320H @ 3.20GHz",
+    "logicalCpus": 8,
+    "memoryGiB": 15.7
+  },
+  "summary": {
+    "availability": {
+      "requests": 595,
+      "unexpected": 0,
+      "p95Ms": 170.45,
+      "statuses": {
+        "200": 595
+      }
+    },
+    "booking": {
+      "requests": 595,
+      "unexpected": 0,
+      "p95Ms": 335.73,
+      "statuses": {
+        "201": 595
+      }
+    }
+  }
+}

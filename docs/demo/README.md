@@ -20,4 +20,6 @@ The submitted video decoded fully with a successful exit status. Frames at the e
 
 Sign in with a seeded development account. Choose an unused future slot within 30 days, using 30-minute increments between 09:00 and 18:00 IST. In two tabs, search and select the same room and slot before confirming either one. Submit the first booking, then submit the other tab's stale selection to see the conflict. Do not sign out between tabs.
 
-CRBS-42 also includes the two-minute Sprint 2 demo. This directory currently supplies its Sprint 1 deliverable only.
+## Sprint 2 demo
+
+[Watch or download the two-minute subtitled recording](Sprint-2-Demo.mp4). The demo shows login, room search, booking and conflict handling, cancellation, room creation and editing, and the GitHub Actions checks and image build.
