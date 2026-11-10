@@ -1,18 +1,20 @@
 # Conference Room Booking System
 
-A Software Engineering mini-project for managing conference rooms in organizations and colleges. The application will let authorized users check room availability, reserve a room, view their bookings and cancel upcoming reservations. Administrators will maintain room details.
+A Software Engineering mini-project for managing conference rooms in organizations and colleges. The application lets authorized users check room availability, reserve a room, view their bookings and cancel upcoming reservations. Administrators maintain room details.
 
 ## Project status
 
-The architecture document and Test Plan are available. Application development, test execution and CI/CD implementation are planned across the two sprints below. Features and checks described here are intended behavior, not claims of completed implementation.
+As of 10 November 2026 the following are implemented and merged to `main`: sign-in with server-side sessions (30-minute expiry, CSRF protection, login rate limiting), room listing, availability search, atomic booking with conflict prevention, My Bookings with cancellation, admin-only room create and edit, and audit logging. Pull requests run CI; every merge to `main` runs CD, which builds a commit-tagged Docker image. Evidence is under [Testing](#testing) and [CD / Deployment](#cd--deployment).
+
+Known limitations, all logged in [docs/DEVIATIONS.md](docs/DEVIATIONS.md): GitHub branch protection (Jira CRBS-47) and the self-hosted deploy job need repository admin rights we did not have, so deployment is demonstrated with `scripts/deploy-local.sh` and a smoke test; some Firefox viewport combinations are unverified.
 
 ## Project documents
 
-- [Software Architecture and Design — SAD, version 1.0](SAD_Conference_Room_Booking_System.docx): layered architecture, components, booking flows, security considerations and illustrative API contracts. Prepared by Bhogala Srika.
-- [Software Test Plan — STP, version 1.2](Test_Plan_Conference_Room_Booking_System.docx): test strategy, 20 initial test scenarios, traceability, sprint testing activities and CI/CD verification. Maintained by Dabbugunta Venya Anand.
-- **Software Requirements Specification — SRS:** to be added by its owner before the required document submission.
+- [Software Architecture and Design — SAD, version 1.1](SAD_Conference_Room_Booking_System.docx): layered architecture, components, booking flows, security considerations and the implemented API contracts. Prepared by Bhogala Srika.
+- [Software Test Plan — STP, version 1.3](Test_Plan_Conference_Room_Booking_System.docx): test strategy, 20 initial test scenarios, traceability, sprint testing activities and CI/CD verification. Maintained by Dabbugunta Venya Anand.
+- [Software Requirements Specification — SRS](SRS_Conferene_Room_Booking.docx): functional, non-functional and security requirements, with evidence notes.
 
-The Test Plan makes concrete release assumptions where SAD 1.0 leaves choices open. **Use Section 11 and Appendix A of the Test Plan when preparing the SRS**, and align the next SAD revision with those choices. Appendix A defines 15 functional requirements, 5 non-functional requirements, 2 security objectives and 5 security requirements.
+The Test Plan makes concrete release assumptions where the original SAD left choices open; Section 11 and Appendix A of the Test Plan are the requirements baseline. Appendix A defines 15 functional requirements, 5 non-functional requirements, 2 security objectives and 5 security requirements. Differences between the implementation and the documents are recorded in [docs/DEVIATIONS.md](docs/DEVIATIONS.md).
 
 Keep all three deliverables and application code in this single team repository. Submit only this repository’s link in the course spreadsheet.
 
@@ -45,7 +47,7 @@ Recurring reservations, approval workflows, email notifications, calendar integr
 - Owners may cancel strictly before the start time. Repeating an already completed cancellation has no further effect.
 - A trimmed meeting purpose of 1–200 characters is required.
 
-## Architecture and planned stack
+## Architecture and stack
 
 The application follows the SAD’s layered design: browser interface → application/API services → database. Authentication, room management and booking logic remain separate modules within one application.
 
@@ -53,25 +55,25 @@ The application follows the SAD’s layered design: browser interface → applic
 - **Backend:** Node.js and Express.
 - **Persistence:** PostgreSQL with Prisma.
 - **Authentication:** server-side sessions stored in PostgreSQL; hashed passwords and protected session cookies.
-- **Testing:** Vitest, Supertest and Playwright, plus manual browser checks.
+- **Testing:** Vitest (client and server) and Supertest (API), plus manual browser checks.
 - **Automation and deployment:** GitHub Actions, Docker and Docker Compose.
 
-Server-side validation, role/ownership checks and atomic database operations will protect booking integrity. The browser alone must not decide whether a booking is permitted.
+Server-side validation, role/ownership checks and atomic database operations protect booking integrity. The browser alone must not decide whether a booking is permitted.
 
 ## Testing
 
 The Test Plan covers unit, API/database integration, browser, security and user acceptance testing. Priority checks include simultaneous booking attempts, forbidden access to another user’s booking, cancellation, persistence and safe error handling.
 
-The small performance check uses 5 concurrent users, 5 rooms and 100 initial bookings over a warmed-up 2-minute run. Targets are a 95th-percentile response time of at most 3 seconds for availability and booking, unexpected errors below 5%, and no duplicate active reservations. Record the test machine specifications with results.
+The small performance check (TC19) uses 5 concurrent users, 5 rooms and 100 initial bookings over a warmed-up 2-minute run. Targets are a 95th-percentile response time of at most 3 seconds for availability and booking, unexpected errors below 5%, and no duplicate active reservations. Result (commit `ac1cf63`, Windows laptop, 8 logical CPUs, 15.7 GiB RAM): availability 595 requests, p95 170 ms; booking 595 requests, all `201`, p95 336 ms; zero unexpected failures. Details are in [docs/performance-testing/](docs/performance-testing/).
 
-Tests start as **Not Run**. Store actual results, evidence and Jira defect links during execution. Release readiness requires passing critical checks and no unresolved critical or high-severity defects.
+Automated tests live in `server/tests` and `client/src`; test names carry the Test Plan IDs (TC01 to TC20) where they apply. The last full verification (9 November 2026, commit `ac1cf63`) passed 72 client and 214 server tests; see [docs/updates/final-verification-2026-11-09.md](docs/updates/final-verification-2026-11-09.md). Other evidence: the failing-test-blocks-CI demonstration ([docs/ci-failure-demo.md](docs/ci-failure-demo.md)), browser and accessibility checks ([docs/evidence/](docs/evidence/)) and the demo recordings in [docs/demo/](docs/demo/). Release readiness requires passing critical checks and no unresolved critical or high-severity defects; items not yet verified (for example some Firefox viewport combinations) are listed in the verification notes.
 
-## Planned CI/CD workflow
+## CI/CD workflow
 
-1. A pull request runs automated unit/API tests and a build on a GitHub-hosted runner, using an isolated PostgreSQL service.
-2. A passing merge to `main` produces a commit-tagged Docker image.
-3. A manually triggered deployment job on a team laptop’s self-hosted runner starts the application and PostgreSQL with Docker Compose, then runs an automated smoke test.
-4. Failed tests block publication/deployment. Failed deployment or smoke checks mark the run failed; recovery to the previous image is manual.
+1. A pull request runs lint, build and automated tests (`ci.yml`, jobs `Server` and `Client`) on a GitHub-hosted runner, using an isolated PostgreSQL service.
+2. A merge to `main` runs `cd.yml`: CI must pass, then a commit-tagged Docker image is built and pushed to `ghcr.io`.
+3. A deployment job for a self-hosted runner on a team laptop starts the application and PostgreSQL with Docker Compose, applies migrations and runs an automated smoke test. It is disabled by default because registering a runner needs repository admin rights (see [CD / Deployment](#cd--deployment)); `scripts/deploy-local.sh` is the documented fallback.
+4. Failed tests block image publication and deployment (demonstrated in [docs/ci-failure-demo.md](docs/ci-failure-demo.md)). Failed deployment or smoke checks mark the run failed; recovery to the previous image is manual.
 
 Run laptop deployment only for trusted code from `main`. Keep secrets out of the repository and run untrusted pull-request checks on GitHub-hosted runners. The laptop and Docker must be running for the demonstration. Paid hosting, Kubernetes and automatic rollback are not required by this project baseline.
 
@@ -101,13 +103,16 @@ The Test Plan records the working responsibility allocation. All team members sh
 
 ```
 client/   React + TypeScript + Tailwind (Vite): src/{pages,components,api}
-server/   Express + TypeScript (Prisma + PostgreSQL later): src/{routes,services,middleware,lib}, prisma/schema.prisma, tests/
-docs/     DEVIATIONS.md (SRS/SAD/Test Plan are the source of truth; log any deviation there)
+server/   Express + TypeScript (Prisma + PostgreSQL): src/{routes,services,middleware,lib}, prisma/schema.prisma, tests/, performance/
+docs/     DEVIATIONS.md (SRS/SAD/Test Plan are the source of truth; log any deviation there), api/, demo/, evidence/, performance-testing/, updates/
+scripts/  deploy-local.sh, smoke-test.sh
+.github/  workflows (ci.yml, cd.yml), pull request template, CODEOWNERS
+*.docx    SRS, SAD and Test Plan (repository root)
 ```
 
 ## How to run
 
-Requirements: Node.js 20+ and npm.
+Requirements: Node.js 22 and npm (CI and the Docker image use Node 22).
 
 ```bash
 cp .env.example .env        # never commit .env
@@ -209,7 +214,7 @@ docker compose down                  # stop everything afterwards
 - One pull request per story; the PR title starts with the Jira key. Build, lint and tests must pass before review.
 - No secrets in git: use `.env.example` for variable names. Use synthetic data only.
 - PRs must use the pull request template, have green `Server` and `Client` checks, and get an owner review (requested automatically via CODEOWNERS) before merging.
-- Direct commits to `main` are not allowed by team rule. GitHub branch protection needs repo admin rights and is tracked as a separate card.
+- Direct commits to `main` are not allowed by team rule. GitHub branch protection needs repo admin rights and is tracked as Jira card CRBS-47.
 
 ## API conventions
 
