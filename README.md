@@ -83,8 +83,7 @@ Retain successful pipeline logs, evidence of a failing test blocking deployment,
 
 - **27 October 2026, before Sprint 1:** submit SRS, SAD and Test Plan.
 - **Sprint 1 — 27–31 October 2026:** prioritize sign-in, availability, booking, persistence, conflict prevention and initial CI.
-- **Sprint 2 — 2–7 November 2026:** complete administration and cancellation, regression/security checks, deployment verification and acceptance testing.
-- **Presentations — starting 9 November 2026:** demonstrate the working application, documents, Jira progress and CI/CD evidence.
+- **Sprint 2 — 2–9 November 2026:** complete administration and cancellation, regression/security checks, deployment verification and acceptance testing.
 
 These dates follow the announcement rather than the older image timeline. The announcement leaves the final submission opening date blank; follow the instructor’s clarification when provided.
 
@@ -112,111 +111,151 @@ scripts/  deploy-local.sh, smoke-test.sh
 
 ## How to run
 
-Requirements: Node.js 22 and npm (CI and the Docker image use Node 22).
+Use Node.js 22 and npm for local development. Start Docker before running the Compose commands. Run the commands below from the repository root in Bash or Git Bash unless a step changes directories.
 
-```bash
-cp .env.example .env        # never commit .env
+### First run for local development
 
-# Server (http://localhost:3000, try GET /api/health)
-cd server && npm install && npm run dev
+1. Create the local environment file and start PostgreSQL.
 
-# Client (http://localhost:5173, proxies /api to the server)
-cd client && npm install && npm run dev
-```
+   ```bash
+   [ -f .env ] || cp .env.example .env
+   docker compose up -d db
+   ```
 
-Scripts available in both `client/` and `server/`: `npm run dev`, `npm run build`, `npm run lint`, `npm test`.
+2. Install the server dependencies, generate the Prisma client, and apply the database migrations. The seed command is optional and loads the demo accounts and sample data.
 
-### First run (local development)
+   ```bash
+   cd server
+   npm ci
+   npx prisma generate
+   node --env-file=../.env node_modules/prisma/build/index.js migrate deploy
+   node --env-file=../.env --import tsx prisma/seed.ts
+   node --env-file=../.env --import tsx --watch src/index.ts
+   ```
 
-A new database is empty; create the schema and (optionally) the demo data once:
+   The API runs at `http://localhost:3000`. Check it at `http://localhost:3000/api/health`.
 
-```bash
-cp .env.example .env                      # then edit the dev values if you like; never commit .env
-docker compose up -d db                   # PostgreSQL, published on 127.0.0.1:5432
-cd server
-npm install
-npx prisma generate                       # generate the Prisma client
-npx prisma migrate deploy                 # create the tables (safe to repeat)
-npx prisma db seed                        # optional: demo users, rooms and one booking
-npm run dev                               # API on http://localhost:3000
-# in another terminal: cd client && npm install && npm run dev
-```
+3. Open another terminal at the repository root and start the frontend.
 
-Seeded demo accounts (synthetic, for local use only):
+   ```bash
+   cd client
+   npm ci
+   npm run dev
+   ```
+
+   Open `http://localhost:5173`. Vite forwards `/api` requests to the server on port `3000`.
+
+Both `client/` and `server/` provide `npm run dev`, `npm run build`, `npm run lint`, and `npm test`. Keep `.env` out of Git.
+
+Seeded accounts for local demos:
 
 | Role | Email | Password |
 | --- | --- | --- |
 | User | `demo.user@example.com` | `User123!@#` |
 | Administrator | `demo.admin@example.com` | `Admin123!@#` |
 
-`DATABASE_URL` differs by where the code runs: on the host (npm commands above) it uses `localhost:5432`, as in `.env.example`. Inside Docker Compose the `app` and `migrate` services override it to use the host name `db`, so you do not edit it for Compose.
-
-To start over with an empty database: `docker compose down -v` (deletes the `pgdata` volume), then repeat the steps above. Integration tests use a separate `crbs_test` database; see "Integration tests".
+Host-run commands connect to PostgreSQL through `localhost:5432` in the default setup. Inside Docker Compose, the `app` and `migrate` services connect to the database at `db:5432`.
 
 ### Docker Compose
 
+For a fresh setup with the default ports, apply migrations before opening the app.
+
 ```bash
-cp .env.example .env
-docker compose up --build      # app on http://localhost:3000, PostgreSQL as service `db`
-docker compose run --rm migrate   # first time only: create the tables (see First run for seeding)
-curl http://localhost:3000/api/health
-docker compose down            # add -v to also delete the database volume
+[ -f .env ] || cp .env.example .env
+docker compose up -d db
+docker compose run --rm --build migrate
+docker compose run --rm migrate npx prisma db seed  # Optional demo data
+docker compose up -d --build app
+curl -fsS http://localhost:3000/api/health
 ```
 
-The single `app` image serves the API and the built client; both services have healthchecks and `app` waits for a healthy `db`.
+Open `http://localhost:3000` for the default Compose setup. The `app` container serves both the frontend and the API. Compose waits for PostgreSQL to become healthy before starting the app.
 
-### Integration tests (database)
+**Team 12 demo laptop:** Open `http://localhost:3012` and check `http://localhost:3012/api/health`. IQAC already uses the laptop’s port `3000`, so the prepared Docker setup maps host port `3012` to port `3000` inside the app container. Its PostgreSQL host port is `55433`.
 
-`server/tests/bookings.test.ts` runs against a real PostgreSQL database named `*_test`; the tests refuse to run if the name in `DATABASE_URL_TEST` does not end with `_test`, so they cannot touch the dev database. The compose `db` service publishes port 5432 on `127.0.0.1` for this.
-
-One-time setup (database running via `docker compose up -d db`):
+If the prepared demo containers are stopped, start them again with their existing port mappings:
 
 ```bash
-# add DATABASE_URL_TEST (see .env.example) to your .env, then:
-docker compose exec db psql -U "$POSTGRES_USER" -c "CREATE DATABASE crbs_test;"
-cd server && npm run test:db:prepare   # applies Prisma migrations to crbs_test
+docker start team-12---conference-room-booking-system-db-1
+docker start team-12---conference-room-booking-system-app-1
+bash ./scripts/smoke-test.sh http://localhost:3012
+```
+
+For the standard Compose setup, `docker compose down` stops the services and preserves the database volume. Use `docker compose down -v` only when you intend to erase the local database and start over.
+
+### Integration tests with PostgreSQL
+
+The server integration tests use a separate database. The name in `DATABASE_URL_TEST` must end in `_test`. The default `.env.example` uses `crbs_test`.
+
+With the database container running, create the test database once:
+
+```bash
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE crbs_test;"'
+```
+
+From the repository root, prepare the schema and run the tests:
+
+```bash
+cd server
+npm ci
+npx prisma generate
+npm run test:db:prepare
 npm test
 ```
 
-Without `DATABASE_URL_TEST` (or the schema), `bookings.test.ts` fails with a clear message rather than skipping. Each test creates and deletes its own synthetic rows.
+Use `localhost:5432` in `DATABASE_URL_TEST` for the default setup. On the prepared demo laptop, use `127.0.0.1:55433` for host-run integration tests. The database name is `crbs_test` in both setups.
 
 ## CD / Deployment
 
-`.github/workflows/cd.yml` ("CD") runs on every push to `main` and can be started by hand (workflow_dispatch):
+The **CD** workflow in `.github/workflows/cd.yml` runs on pushes to `main` and can also be started manually.
 
-1. **ci** reuses `ci.yml` (jobs `Server` and `Client`). If any test fails, nothing below runs.
-2. **build-image** builds the `Dockerfile` and pushes `ghcr.io/<owner>/<repo>:<commit-sha>` and `:latest` using the built-in `GITHUB_TOKEN` (the image reference is printed in the job summary).
-3. **deploy** pulls the commit-tagged image, applies pending database migrations (`migrate` service, see below), starts the app with `docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d` and runs `scripts/smoke-test.sh`. It is **skipped by default**.
+1. **CI** runs the Server and Client checks from `ci.yml`. A failed check blocks the image build and deploy jobs.
+2. **Build image** builds the Docker image and publishes it to GitHub Container Registry. It tags the image with the commit SHA and `latest`.
+3. **Deploy** pulls the commit-tagged image, applies migrations, starts the Docker Compose services, and runs the smoke test. The job requires `DEPLOY_ENABLED=true` and a configured self-hosted runner.
 
-**Enable the self-hosted deploy job:** register a self-hosted runner (needs repo admin; Docker must be running on that machine), put your real environment file at `~/crbs.env` on the runner machine (copy of `.env.example`; or set the repo variable `DEPLOY_ENV_FILE` to another path; it is never stored in git), then set the repository variable `DEPLOY_ENABLED` to `true` (Settings > Secrets and variables > Actions > Variables).
+To enable the self-hosted deployment, a repository admin must register a runner with Docker available. Put the deployment environment file at `~/crbs.env` on the runner, or set the `DEPLOY_ENV_FILE` repository variable to its location. Set `DEPLOY_ENABLED` to `true` under **Settings → Secrets and variables → Actions → Variables**.
 
-**Deploy by hand (no runner needed):**
+### Deploy locally
+
+From the repository root, use Git Bash or another Bash shell:
 
 ```bash
-cp .env.example .env                 # once
-./scripts/deploy-local.sh            # builds crbs-app:<HEAD sha> locally, migrates the database, starts it, runs the smoke test
-./scripts/deploy-local.sh --seed     # same, plus loads the demo data once and checks a demo sign-in
-./scripts/deploy-local.sh <sha>      # a specific commit
-./scripts/deploy-local.sh <sha> --pull   # use the ghcr.io image instead of building
-docker compose down                  # stop everything afterwards
+[ -f .env ] || cp .env.example .env
+bash ./scripts/deploy-local.sh
 ```
 
-`scripts/smoke-test.sh [base-url]` can be run against any running instance (default `http://localhost:3000`): it waits up to 30 s, then checks `GET /api/health` returns 200 and `GET /api/rooms` without a session returns 401 with the standard error JSON.
+For a seeded demo, run:
 
-**ghcr.io package visibility:** new packages are private. To change it, open the repository's Packages, select the package, then Package settings > Danger Zone > Change visibility (needs admin rights on the package). A private image needs `docker login ghcr.io` with a token that has `read:packages` before `--pull` works on another machine. 
-**Migrations and seed in deploys:** every deploy (script or workflow) runs `prisma migrate deploy` before starting the app, so a fresh database gets its tables and a repeat run does nothing. The runtime image has no Prisma CLI, so this runs in a one-off `migrate` container (`docker-compose.yml`, profile `tools`) built from the Dockerfile's `server-build` stage. Seeding is never automatic: use `./scripts/deploy-local.sh --seed`, or tick **seed** when you start the CD workflow by hand (the deploy job also needs `DEPLOY_ENABLED=true`). With seeding on, the smoke test also signs in as the demo user (`SEED_CHECK=1`).
+```bash
+bash ./scripts/deploy-local.sh --seed
+```
 
-## Contributing: branches, commits and PRs
+The script builds the image from the current checkout, applies pending migrations, starts the services, and runs the smoke test. With `--seed`, it also loads demo data and verifies that the demo user can sign in.
 
-- Never commit to `main` directly.
-- One branch per Jira story, named `CRBS-<n>-<short-name>`, e.g. `CRBS-11-scaffold`.
-- Every commit message starts with the Jira key, e.g. `CRBS-11: add server skeleton`.
-- One pull request per story; the PR title starts with the Jira key. Build, lint and tests must pass before review.
-- No secrets in git: use `.env.example` for variable names. Use synthetic data only.
-- PRs must use the pull request template, have green `Server` and `Client` checks, and get an owner review (requested automatically via CODEOWNERS) before merging.
-- Direct commits to `main` are not allowed by team rule. GitHub branch protection needs repo admin rights and is tracked as Jira card CRBS-47.
+To deploy an image already published for a specific commit, use:
+
+```bash
+bash ./scripts/deploy-local.sh <commit-sha> --pull
+```
+
+If the image is private, sign in to `ghcr.io` with an account and token that can read the package before pulling it.
+
+The smoke test checks that `/api/health` returns `200` and that an unauthenticated request to `/api/rooms` returns `401`. Pass the URL explicitly when checking the prepared demo laptop:
+
+```bash
+bash ./scripts/smoke-test.sh http://localhost:3012
+```
+
+## Contributing
+
+- Create a branch for each Jira story, such as `CRBS-11-scaffold`.
+- Start commit messages and pull request titles with the Jira key.
+- Open a pull request into `main` and use the repository’s PR template. Follow the team’s review process and verify that the Server and Client checks pass before merging.
+- Use synthetic test data and keep secrets and `.env` files out of Git.
+- Make changes to `main` through pull requests. Repository-enforced branch protection requires admin access and is tracked in CRBS-47.
 
 ## API conventions
 
-- Errors are always `{ "error": { "code": "...", "message": "..." } }` using 400/401/403/404/409, plus a safe 500.
-- Timestamps are stored in UTC; the organisation timezone is Asia/Kolkata; time intervals are half-open `[start, end)`.
+API errors use the shape `{ "error": { "code": "...", "message": "..." } }`. Common responses include `400` for invalid input, `401` for a missing or invalid session, `403` for forbidden actions, `404` for missing or undisclosed resources, `409` for booking conflicts, and `500` for unexpected errors.
+
+The organization uses `Asia/Kolkata` for booking times and stores timestamps in UTC. Bookings use half-open intervals `[start, end)`, so a booking ending at 11:00 can be followed by one starting at 11:00.
