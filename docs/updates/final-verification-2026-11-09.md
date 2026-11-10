@@ -18,7 +18,7 @@ The Chromium-based in-app browser ran the core search, booking and cancellation 
 
 At 360×800 the first Tab reached the skip link. Booking #29 was created and cancelled. At 1366×768 booking #30 was created and cancelled. At both sizes the cancellation dialog initially focused Keep booking, trapped focus when tabbing past a boundary, and returned focus to the cancel button on Escape. The second opening was used to confirm the cancellation. The exact Chromium version was unavailable from the in-app browser session.
 
-The [earlier manual Firefox smoke test](venya-doc-updates.md#firefox-functional-smoke-test---operator-reported-pass) records Firefox 159.0.1 and the tested cases. A fresh Firefox run could not proceed because the browser control environment does not support URL policy enforcement for that Windows browser. Remaining Firefox viewport combinations are still unverified.
+Venya confirmed on 10 November that the full [manual Firefox checklist](../CRBS-36-keyboard-accessibility.md#retest-results-and-evidence) passed in Firefox 159.0.1 at 360×800 and 1366×768. This is the manual tester’s confirmation and supersedes the incomplete viewport annotations in the original handoff.
 
 ## TC20 deployment
 

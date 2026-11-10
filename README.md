@@ -6,7 +6,7 @@ A Software Engineering mini-project for managing conference rooms in organizatio
 
 As of 10 November 2026 the following are implemented and merged to `main`: sign-in with server-side sessions (30-minute expiry, CSRF protection, login rate limiting), room listing, availability search, atomic booking with conflict prevention, My Bookings with cancellation, admin-only room create and edit, and audit logging. Pull requests run CI; every merge to `main` runs CD, which builds a commit-tagged Docker image. Evidence is under [Testing](#testing) and [CD / Deployment](#cd--deployment).
 
-Known limitations, all logged in [docs/DEVIATIONS.md](docs/DEVIATIONS.md): GitHub branch protection (Jira CRBS-47) and the self-hosted deploy job need repository admin rights we did not have, so deployment is demonstrated with `scripts/deploy-local.sh` and a smoke test; some Firefox viewport combinations are unverified.
+Known limitations, all logged in [docs/DEVIATIONS.md](docs/DEVIATIONS.md): GitHub branch protection (Jira CRBS-47) and the self-hosted deploy job need repository admin rights we did not have, so deployment is demonstrated with `scripts/deploy-local.sh` and a smoke test.
 
 ## Project documents
 
@@ -66,7 +66,7 @@ The Test Plan covers unit, API/database integration, browser, security and user 
 
 The small performance check (TC19) uses 5 concurrent users, 5 rooms and 100 initial bookings over a warmed-up 2-minute run. Targets are a 95th-percentile response time of at most 3 seconds for availability and booking, unexpected errors below 5%, and no duplicate active reservations. Result (commit `ac1cf63`, Windows laptop, 8 logical CPUs, 15.7 GiB RAM): availability 595 requests, p95 170 ms; booking 595 requests, all `201`, p95 336 ms; zero unexpected failures. Details are in [docs/performance-testing/](docs/performance-testing/).
 
-Automated tests live in `server/tests` and `client/src`; test names carry the Test Plan IDs (TC01 to TC20) where they apply. The last full verification (9 November 2026, commit `ac1cf63`) passed 72 client and 214 server tests; see [docs/updates/final-verification-2026-11-09.md](docs/updates/final-verification-2026-11-09.md). Other evidence: the failing-test-blocks-CI demonstration ([docs/ci-failure-demo.md](docs/ci-failure-demo.md)), browser and accessibility checks ([docs/evidence/](docs/evidence/)) and the demo recordings in [docs/demo/](docs/demo/). Release readiness requires passing critical checks and no unresolved critical or high-severity defects; items not yet verified (for example some Firefox viewport combinations) are listed in the verification notes.
+Automated tests live in `server/tests` and `client/src`; test names carry the Test Plan IDs (TC01 to TC20) where they apply. The last full verification (9 November 2026, commit `ac1cf63`) passed 72 client and 214 server tests; see [docs/updates/final-verification-2026-11-09.md](docs/updates/final-verification-2026-11-09.md). Other evidence: the failing-test-blocks-CI demonstration ([docs/ci-failure-demo.md](docs/ci-failure-demo.md)), browser and accessibility checks ([docs/evidence/](docs/evidence/)) and the demo recordings in [docs/demo/](docs/demo/). Release readiness requires passing critical checks and no unresolved critical or high-severity defects; Venya confirmed the full manual Firefox checklist passed at 360×800 and 1366×768. See the verification notes for the test scope.
 
 ## CI/CD workflow
 

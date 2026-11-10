@@ -103,3 +103,7 @@ Normal-user exclusion was checked by navigation visibility in both browsers. Eve
 Screenshots are in `docs/evidence/CRBS-40/`: Firefox About, login with 360x800 toolbar (earlier pre-fix visual evidence), post-fix dialog focus, cancelled booking #18, overlap message and From focus. Cropped screenshots do not establish exact viewport sizes; the size-specific results above are Venya's explicit observations. Venya explicitly confirmed that opening the cancellation dialog using Enter immediately shows the dark outline on Keep booking, before any further Tab press; this Firefox-specific initial-focus check passed by manual observation. Quantitative contrast measurement and complete post-fix cross-browser signoff remain pending. Do not mark unexecuted matrix entries Passed or infer them from unit tests.
 
 After the requirement PRs merge, execute the checklist in `docs/CRBS-36-keyboard-accessibility.md` at both exact sizes and run the core login/list/search/book/cancel flows in Firefox, recording version, commit, steps, outcome and screenshots. Then update CRBS-36/40 evidence and copy the final results into the formal documents. These notes are ready for review; the pending browser outcomes still prevent a full final test-summary signoff.
+
+## Firefox acceptance confirmation on 10 November 2026
+
+Venya confirmed that the full manual Firefox checklist passed at both 360×800 and 1366×768. This confirmation supersedes the pending Firefox viewport entries in the historical handoff above.
